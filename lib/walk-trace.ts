@@ -1,9 +1,4 @@
-import type {
-  LayerRef,
-  PcbTraceRoutePoint,
-  PcbTraceRoutePointWire,
-  Point,
-} from "circuit-json"
+import type { LayerRef, PcbTraceRoutePoint, Point } from "circuit-json"
 import {
   getLayerChangeLength,
   type LayerChangeBoard,
@@ -43,24 +38,7 @@ type TraceRouteVertex = {
   /** One or two copper layers. */
   layers: LayerRef[]
   width: number | undefined
-  /** How a wire point's outgoing piece tapers, or null when it keeps `width`. */
-  taper: WireTaper | null
 }
-
-/** A wire point's outgoing taper: its width changes from `start_width` to `end_width` along the piece it starts. */
-type WireTaper = {
-  start_width: number
-  end_width: number
-  width_interpolation_mode: NonNullable<
-    PcbTraceRoutePointWire["width_interpolation_mode"]
-  >
-}
-
-/** A straight piece of copper and its width, in mm. */
-type CopperPiece = { start: Point; end: Point; width: number }
-
-/** Tapers are cut into pieces whose widths differ by at most this, in mm, so each piece is matched and drawn at its local width. */
-const TAPER_WIDTH_STEP_MM = 0.01
 
 /**
  * Splits a trace's route into straight pieces in stored route order, with
@@ -72,8 +50,7 @@ const TAPER_WIDTH_STEP_MM = 0.01
  * as core routes a `pcbPath` between vias, are joined on the layer they
  * share. Each piece is as wide as its start point, or its end point when it
  * starts at a via; a piece from one via to the next keeps the previous
- * piece's width. A wire point's taper, such as a teardrop, is cut into
- * pieces each as wide as the taper midway through its width change.
+ * piece's width.
  *
  * Consecutive pieces that continue in a straight line on the same copper
  * are joined, so how finely a route is split into points doesn't matter.
@@ -124,27 +101,18 @@ function getTraceWalkFromVertices({
       if (length > 0) {
         const width = from.width ?? to.width ?? steps[steps.length - 1]?.width
         if (width === undefined) return null
-        for (const piece of getTaperedPieces({
+        steps.push({
           start: from.point,
           end: to.point,
+          layer: arrivingLayer,
           width,
-          taper: from.taper,
-        })) {
-          const pieceLength = Math.hypot(
-            piece.end.x - piece.start.x,
-            piece.end.y - piece.start.y,
-          )
-          steps.push({
-            ...piece,
-            layer: arrivingLayer,
-            startDistance: distance,
-            length: pieceLength,
-            layerChangeLengthBeforeMm: pendingLayerChangeLengthMm,
-            layerChangeLengthAfterMm: 0,
-          })
-          pendingLayerChangeLengthMm = 0
-          distance += pieceLength
-        }
+          startDistance: distance,
+          length,
+          layerChangeLengthBeforeMm: pendingLayerChangeLengthMm,
+          layerChangeLengthAfterMm: 0,
+        })
+        pendingLayerChangeLengthMm = 0
+        distance += length
       }
     }
     layer = getDepartingLayer({ vertex: to, arrivingLayer })
@@ -165,78 +133,6 @@ function getTraceWalkFromVertices({
     }
   }
   return { steps, length: distance }
-}
-
-/**
- * The piece from `start` to `end` as copper pieces: whole at `width`
- * without a taper, else cut every {@link TAPER_WIDTH_STEP_MM} mm of width
- * change, each piece as wide as the taper midway through its change.
- */
-function getTaperedPieces({
-  start,
-  end,
-  width,
-  taper,
-}: CopperPiece & { taper: WireTaper | null }): CopperPiece[] {
-  if (taper === null) return [{ start, end, width }]
-  const widthChange = taper.end_width - taper.start_width
-  const pieceCount = Math.max(
-    1,
-    Math.ceil(Math.abs(widthChange) / TAPER_WIDTH_STEP_MM),
-  )
-  const pieces: CopperPiece[] = []
-  for (let piece = 0; piece < pieceCount; piece++) {
-    const startFraction = getTaperDistanceFraction({
-      taper,
-      widthChangeFraction: piece / pieceCount,
-    })
-    const endFraction = getTaperDistanceFraction({
-      taper,
-      widthChangeFraction: (piece + 1) / pieceCount,
-    })
-    pieces.push({
-      start: pointAlong({ start, end, fraction: startFraction }),
-      end: pointAlong({ start, end, fraction: endFraction }),
-      width: taper.start_width + (widthChange * (piece + 0.5)) / pieceCount,
-    })
-  }
-  return pieces
-}
-
-/**
- * How far along a taper, as a fraction of its length, its width has made
- * `widthChangeFraction` of its change. A quadratic taper is flat at its
- * narrow end, as the copper renderers draw it: there the width grows with
- * the square of the distance.
- */
-function getTaperDistanceFraction({
-  taper,
-  widthChangeFraction,
-}: {
-  taper: WireTaper
-  widthChangeFraction: number
-}): number {
-  if (taper.width_interpolation_mode === "linear") return widthChangeFraction
-  if (taper.start_width <= taper.end_width) {
-    return Math.sqrt(widthChangeFraction)
-  }
-  return 1 - Math.sqrt(1 - widthChangeFraction)
-}
-
-/** The point a fraction of the way from `start` to `end`. */
-function pointAlong({
-  start,
-  end,
-  fraction,
-}: {
-  start: Point
-  end: Point
-  fraction: number
-}): Point {
-  return {
-    x: start.x + (end.x - start.x) * fraction,
-    y: start.y + (end.y - start.y) * fraction,
-  }
 }
 
 /** The layer copper leaves a vertex on: a wire point's own layer, or the other of the two layers a via joins. */
@@ -326,7 +222,6 @@ function getTraceRouteVertices({
         point: { x: routePoint.x, y: routePoint.y },
         layers: [routePoint.layer],
         width: routePoint.width,
-        taper: getWireTaper(routePoint),
       })
       continue
     }
@@ -335,7 +230,6 @@ function getTraceRouteVertices({
         point: { x: routePoint.x, y: routePoint.y },
         layers: [routePoint.from_layer, routePoint.to_layer],
         width: undefined,
-        taper: null,
       })
       continue
     }
@@ -345,27 +239,12 @@ function getTraceRouteVertices({
       point: routePoint.start,
       layers: [routePoint.start_layer],
       width: routePoint.width,
-      taper: null,
     })
     vertices.push({
       point: routePoint.end,
       layers: [routePoint.start_layer, routePoint.end_layer],
       width: routePoint.width,
-      taper: null,
     })
   }
   return vertices
-}
-
-/** A wire point's outgoing taper, or null when it has none. Circuit JSON sets all three taper fields or none. */
-function getWireTaper(wire: PcbTraceRoutePointWire): WireTaper | null {
-  const { start_width, end_width, width_interpolation_mode } = wire
-  if (
-    start_width === undefined ||
-    end_width === undefined ||
-    width_interpolation_mode === undefined
-  ) {
-    return null
-  }
-  return { start_width, end_width, width_interpolation_mode }
 }

@@ -2,7 +2,6 @@ import type { CircuitJsonUtilObjects } from "@tscircuit/circuit-json-util"
 import type {
   LayerRef,
   PcbPort,
-  PcbTrace,
   PcbTraceRoutePoint,
   PcbTraceRoutePointWire,
   Point,
@@ -28,6 +27,9 @@ type PadClip = {
 /** Halvings of the segment that crosses a pad's edge; 40 locate the edge to under a picometre on any board. */
 const PAD_EXIT_BISECTION_STEPS = 40
 
+/** Routing inside a pad no longer than a straight line plus this, in mm, is already straight: rounding, not a jog. */
+const STRAIGHT_PATH_TOLERANCE_MM = 1e-9
+
 /**
  * The route with the copper inside its start and end pads replaced by a
  * straight line from the route's end to where it first leaves the pad, as
@@ -35,16 +37,17 @@ const PAD_EXIT_BISECTION_STEPS = 40
  * jog hidden inside a pad, or inside its drill, so adds no phase skew. When
  * the route stays inside the pad up to a via, it runs straight to the via,
  * which keeps its layer change. Pads are the end ports' pads on the end
- * point's layer, measured by their outer copper outline.
+ * point's layer, measured by their outer copper outline. Cut tapers
+ * first, so the wire point moved to a pad's edge keeps the taper's width
+ * there.
  */
 export function clipRouteToTerminalPads({
-  trace,
+  route,
   db,
 }: {
-  trace: PcbTrace
+  route: PcbTraceRoutePoint[]
   db: CircuitJsonUtilObjects
 }): PcbTraceRoutePoint[] {
-  const route = trace.route
   const first = route[0]
   const last = route[route.length - 1]
   let clippedRoute = route
@@ -118,7 +121,8 @@ function getPortPadOutline({
  * Walks from one end of the route through the wire points on that end's
  * layer and finds where it first leaves the pad, or the via it reaches
  * while still inside. Null when there is no pad or nothing to clip: the
- * route leaves the pad, or reaches the via, straight from its end.
+ * route already runs straight from its end to where it leaves the pad or
+ * to the via, as a teardrop does, so its points and widths are kept.
  */
 function findPadClip({
   route,
@@ -137,6 +141,7 @@ function findPadClip({
 }): PadClip | null {
   if (padOutline === null) return null
   let lastInsideWire = endWire
+  let insidePathLengthMm = 0
   for (
     let index = endIndex + direction;
     index >= 0 && index < route.length;
@@ -151,29 +156,75 @@ function findPadClip({
       return null
     }
     const position = { x: routePoint.x, y: routePoint.y }
-    const isBesideEnd = index - direction === endIndex
     if (isInsidePadOutline({ padOutline, point: position })) {
       if (routePoint.route_type === "wire") {
+        insidePathLengthMm += distance({ a: lastInsideWire, b: position })
         lastInsideWire = routePoint
         continue
       }
-      if (isBesideEnd) return null
+      if (
+        isStraightPath({
+          endWire,
+          lastInsideWire,
+          insidePathLengthMm,
+          pathEnd: position,
+        })
+      ) {
+        return null
+      }
       return { keptIndex: index, insertedWire: null }
     }
-    if (isBesideEnd) return null
+    const exitPoint = getPadExitPoint({
+      padOutline,
+      inside: lastInsideWire,
+      outside: position,
+    })
+    if (
+      isStraightPath({
+        endWire,
+        lastInsideWire,
+        insidePathLengthMm,
+        pathEnd: exitPoint,
+      })
+    ) {
+      return null
+    }
     return {
       keptIndex: index,
-      insertedWire: {
-        ...lastInsideWire,
-        ...getPadExitPoint({
-          padOutline,
-          inside: lastInsideWire,
-          outside: position,
-        }),
-      },
+      insertedWire: { ...lastInsideWire, ...exitPoint },
     }
   }
   return null
+}
+
+/**
+ * True when the route from the end in the pad, through its points inside
+ * the pad, on to `pathEnd` is a straight line, so clipping would change
+ * nothing.
+ */
+function isStraightPath({
+  endWire,
+  lastInsideWire,
+  insidePathLengthMm,
+  pathEnd,
+}: {
+  endWire: Point
+  lastInsideWire: Point
+  /** Routed length from `endWire` to `lastInsideWire`, in mm. */
+  insidePathLengthMm: number
+  pathEnd: Point
+}): boolean {
+  const pathLengthMm =
+    insidePathLengthMm + distance({ a: lastInsideWire, b: pathEnd })
+  return (
+    pathLengthMm - distance({ a: endWire, b: pathEnd }) <=
+    STRAIGHT_PATH_TOLERANCE_MM
+  )
+}
+
+/** Straight-line distance between two points, in mm. */
+function distance({ a, b }: { a: Point; b: Point }): number {
+  return Math.hypot(a.x - b.x, a.y - b.y)
 }
 
 /** The point where the segment from a point inside a pad to one outside it crosses the pad's edge (bisection). */

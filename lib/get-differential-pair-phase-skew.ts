@@ -11,6 +11,7 @@ import type {
   SourceBus,
 } from "circuit-json"
 import { clipRouteToTerminalPads } from "./clip-route-to-terminal-pads"
+import { cutRouteTapers } from "./cut-route-tapers"
 import type {
   DifferentialPairPhaseSkew,
   PhaseSkewTrace,
@@ -172,11 +173,17 @@ function walkPair({
 }): PairWalks | null {
   const layerChangeBoard = getLayerChangeBoard({ db, board })
   const positiveWalk = walkTrace({
-    route: clipRouteToTerminalPads({ trace: positiveTrace, db }),
+    route: clipRouteToTerminalPads({
+      route: cutRouteTapers({ route: positiveTrace.route }),
+      db,
+    }),
     ...layerChangeBoard,
   })
   const negativeWalk = walkTrace({
-    route: clipRouteToTerminalPads({ trace: negativeTrace, db }),
+    route: clipRouteToTerminalPads({
+      route: cutRouteTapers({ route: negativeTrace.route }),
+      db,
+    }),
     ...layerChangeBoard,
   })
   if (positiveWalk === null || negativeWalk === null) return null
