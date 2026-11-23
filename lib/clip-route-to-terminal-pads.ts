@@ -7,9 +7,9 @@ import type {
   Point,
 } from "circuit-json"
 import {
+  getPadOutlineExitPoint,
   getPlatedHoleOutline,
   getSmtPadOutline,
-  isInsidePadOutline,
   type PadOutline,
 } from "./get-pad-outline"
 
@@ -23,9 +23,6 @@ type PadClip = {
   keptIndex: number
   insertedWire: PcbTraceRoutePointWire | null
 }
-
-/** Halvings of the segment that crosses a pad's edge; 40 locate the edge to under a picometre on any board. */
-const PAD_EXIT_BISECTION_STEPS = 40
 
 /** Routing inside a pad no longer than a straight line plus this, in mm, is already straight: rounding, not a jog. */
 const STRAIGHT_PATH_TOLERANCE_MM = 1e-9
@@ -156,7 +153,12 @@ function findPadClip({
       return null
     }
     const position = { x: routePoint.x, y: routePoint.y }
-    if (isInsidePadOutline({ padOutline, point: position })) {
+    const exitPoint = getPadOutlineExitPoint({
+      padOutline,
+      start: lastInsideWire,
+      end: position,
+    })
+    if (exitPoint === null) {
       if (routePoint.route_type === "wire") {
         insidePathLengthMm += distance({ a: lastInsideWire, b: position })
         lastInsideWire = routePoint
@@ -174,11 +176,6 @@ function findPadClip({
       }
       return { keptIndex: index, insertedWire: null }
     }
-    const exitPoint = getPadExitPoint({
-      padOutline,
-      inside: lastInsideWire,
-      outside: position,
-    })
     if (
       isStraightPath({
         endWire,
@@ -225,44 +222,4 @@ function isStraightPath({
 /** Straight-line distance between two points, in mm. */
 function distance({ a, b }: { a: Point; b: Point }): number {
   return Math.hypot(a.x - b.x, a.y - b.y)
-}
-
-/** The point where the segment from a point inside a pad to one outside it crosses the pad's edge (bisection). */
-function getPadExitPoint({
-  padOutline,
-  inside,
-  outside,
-}: {
-  padOutline: PadOutline
-  inside: Point
-  outside: Point
-}): Point {
-  let insideFraction = 0
-  let outsideFraction = 1
-  for (let step = 0; step < PAD_EXIT_BISECTION_STEPS; step++) {
-    const middleFraction = (insideFraction + outsideFraction) / 2
-    const middle = pointAlong({ inside, outside, fraction: middleFraction })
-    if (isInsidePadOutline({ padOutline, point: middle })) {
-      insideFraction = middleFraction
-      continue
-    }
-    outsideFraction = middleFraction
-  }
-  return pointAlong({ inside, outside, fraction: insideFraction })
-}
-
-/** The point a fraction of the way from `inside` to `outside`. */
-function pointAlong({
-  inside,
-  outside,
-  fraction,
-}: {
-  inside: Point
-  outside: Point
-  fraction: number
-}): Point {
-  return {
-    x: inside.x + (outside.x - inside.x) * fraction,
-    y: inside.y + (outside.y - inside.y) * fraction,
-  }
 }

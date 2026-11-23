@@ -1,5 +1,8 @@
 import type { PcbPlatedHole, PcbSmtPad, Point } from "circuit-json"
 
+/** Halvings of the segment that crosses a convex pad's edge; 40 locate the edge to under a picometre on any board. */
+const PAD_EXIT_BISECTION_STEPS = 40
+
 /**
  * A pad's outer copper outline in board coordinates, drill included: a
  * rounded rectangle (a circle or pill is one with a full corner radius), an
@@ -124,7 +127,7 @@ export function getPlatedHoleOutline({
 }
 
 /** True when a point lies inside or on the edge of a pad outline. */
-export function isInsidePadOutline({
+function isInsidePadOutline({
   padOutline,
   point,
 }: {
@@ -159,6 +162,119 @@ export function isInsidePadOutline({
   return (
     Math.hypot(Math.max(beyondX, 0), Math.max(beyondY, 0)) <= cornerRadiusMm
   )
+}
+
+/**
+ * Where the segment from `start`, inside a pad, to `end` first leaves the
+ * pad's outline, or null when it stays inside. Rounded rectangles and
+ * ellipses are convex, so such a segment leaves only if `end` is outside;
+ * a polygon can be concave, so the segment can leave through a notch and
+ * come back between two inside points.
+ */
+export function getPadOutlineExitPoint({
+  padOutline,
+  start,
+  end,
+}: {
+  padOutline: PadOutline
+  start: Point
+  end: Point
+}): Point | null {
+  if (padOutline.kind === "polygon") {
+    return getPolygonExitPoint({ points: padOutline.points, start, end })
+  }
+  if (isInsidePadOutline({ padOutline, point: end })) return null
+  let insideFraction = 0
+  let outsideFraction = 1
+  for (let step = 0; step < PAD_EXIT_BISECTION_STEPS; step++) {
+    const middleFraction = (insideFraction + outsideFraction) / 2
+    const middle = pointAlong({ start, end, fraction: middleFraction })
+    if (isInsidePadOutline({ padOutline, point: middle })) {
+      insideFraction = middleFraction
+      continue
+    }
+    outsideFraction = middleFraction
+  }
+  return pointAlong({ start, end, fraction: insideFraction })
+}
+
+/**
+ * Where a segment from inside a polygon first leaves it, or null when it
+ * stays inside: the first edge crossing after which the segment is outside.
+ */
+function getPolygonExitPoint({
+  points,
+  start,
+  end,
+}: {
+  points: Point[]
+  start: Point
+  end: Point
+}): Point | null {
+  const crossingFractions = getPolygonCrossingFractions({ points, start, end })
+  let previousFraction = 0
+  for (const crossingFraction of [...crossingFractions, 1]) {
+    const middle = pointAlong({
+      start,
+      end,
+      fraction: (previousFraction + crossingFraction) / 2,
+    })
+    if (!isInsidePolygon({ points, point: middle })) {
+      return pointAlong({ start, end, fraction: previousFraction })
+    }
+    previousFraction = crossingFraction
+  }
+  return null
+}
+
+/** Fractions along the segment from `start` to `end` where it crosses a polygon edge, ascending. */
+function getPolygonCrossingFractions({
+  points,
+  start,
+  end,
+}: {
+  points: Point[]
+  start: Point
+  end: Point
+}): number[] {
+  const segment = { x: end.x - start.x, y: end.y - start.y }
+  const crossingFractions: number[] = []
+  for (let index = 0; index < points.length; index++) {
+    const edgeStart = points[index]
+    const edgeEnd = points[(index + 1) % points.length]
+    const edge = { x: edgeEnd.x - edgeStart.x, y: edgeEnd.y - edgeStart.y }
+    const denominator = cross({ a: segment, b: edge })
+    // A segment parallel to an edge runs along it or misses it.
+    if (denominator === 0) continue
+    const fromStart = { x: edgeStart.x - start.x, y: edgeStart.y - start.y }
+    const segmentFraction = cross({ a: fromStart, b: edge }) / denominator
+    const edgeFraction = cross({ a: fromStart, b: segment }) / denominator
+    if (segmentFraction <= 0 || segmentFraction >= 1) continue
+    if (edgeFraction < 0 || edgeFraction > 1) continue
+    crossingFractions.push(segmentFraction)
+  }
+  return crossingFractions.sort((a, b) => a - b)
+}
+
+/** The z component of the cross product of two vectors in the plane. */
+function cross({ a, b }: { a: Point; b: Point }): number {
+  return a.x * b.y - a.y * b.x
+}
+
+/** The point a fraction of the way from `start` to `end`. */
+function pointAlong({
+  start,
+  end,
+  fraction,
+}: {
+  start: Point
+  end: Point
+  fraction: number
+}): Point {
+  return {
+    x: start.x + (end.x - start.x) * fraction,
+    y: start.y + (end.y - start.y) * fraction,
+  }
 }
 
 /** A round outline as a rounded rectangle with a full corner radius. */
