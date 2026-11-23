@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="800" height="116" viewBox="-10 -1.45 20 2.9">
+  <rect x="-10" y="-1.45" width="20" height="2.9" fill="#182124"/>
+  <g transform="scale(1 -1)">
+    <line x1="-9" y1="0.45" x2="-6" y2="0.45" stroke="#8d6448" stroke-width="0.15"/>
+    <line x1="-2" y1="0.45" x2="9" y2="0.45" stroke="#8d6448" stroke-width="0.15"/>
+    <line x1="-9" y1="-0.45" x2="9" y2="-0.45" stroke="#8d6448" stroke-width="0.15"/>
+  </g>
+  <text x="-9.7" y="-0.97" font-family="sans-serif" font-size="0.32" fill="#fff">Max phase skew (mm): no measurable pairs. Blue: ahead. Red: behind. White: in step. Grey: unknown.</text>
+</svg>

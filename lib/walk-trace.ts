@@ -28,86 +28,128 @@ export type TraceWalk = {
   length: number
 }
 
-/** A point the route passes through, the layer of the copper arriving at it, its own width (none for a via) and the Z-distance of any layer change there. */
+/**
+ * A point the route passes through and the layers copper joins there: one
+ * for a wire point, or the two layers a via, or a through pad's far end,
+ * joins. A via has no width of its own.
+ */
 type TraceRouteVertex = {
   point: Point
-  layer: LayerRef
+  /** One or two copper layers. */
+  layers: LayerRef[]
   width: number | undefined
-  layerChangeLengthMm: number
 }
 
 /**
- * Splits a trace route into straight pieces in stored route order.
- *
- * Copper arriving at a wire point uses that wire's layer; copper arriving
- * at a via uses the via's `from_layer`. Each piece is as wide as its start
- * point, or its end point when it starts at a via, as renderers draw it. A
- * piece from one via to the next keeps the previous piece's width.
- * A via, or a through pad, between two different layers adds their
- * Z-distance through the board's stackup.
+ * Splits a trace route into straight pieces in stored route order, with
+ * the copper renderers' layer rules: copper runs between consecutive wire
+ * points on the same layer, between a wire point and a via on one of the
+ * via's layers, and across a through pad. Copper arriving at a via, or at a
+ * through pad's far end, on one of its two layers leaves on the other,
+ * adding their Z-distance through the board's stackup. Two vias in a row,
+ * as core routes a `pcbPath` between vias, are joined on the layer they
+ * share. Each piece is as wide as its start point, or its end point when it
+ * starts at a via; a piece from one via to the next keeps the previous
+ * piece's width.
  *
  * Consecutive pieces that continue in a straight line on the same copper
  * are joined, so how finely a route is split into points doesn't matter.
  *
- * Null when the route has no planar copper, such as a via in pad joining
- * two pads at the same point: there is nothing to measure phase skew along.
+ * Null when there is nothing to measure phase skew along: the route has no
+ * planar copper, such as a via in pad joining two pads at the same point,
+ * or its copper isn't continuous, such as two wire points on different
+ * layers with no via between them.
  */
 export function walkTrace({
   trace,
   pcbStackup,
   boardThickness,
 }: { trace: PcbTrace } & LayerChangeBoard): TraceWalk | null {
-  const vertices = getTraceRouteVertices({ trace, pcbStackup, boardThickness })
-  const { steps, length } = getTraceWalkFromVertices({ vertices })
-  if (steps.length === 0) return null
-  return { steps: joinStraightSteps({ steps }), length }
+  const walk = getTraceWalkFromVertices({
+    vertices: getTraceRouteVertices({ trace }),
+    pcbStackup,
+    boardThickness,
+  })
+  if (walk === null || walk.steps.length === 0) return null
+  return {
+    steps: joinStraightSteps({ steps: walk.steps }),
+    length: walk.length,
+  }
 }
 
-/** One step from each route vertex to the next, skipping zero-length ones, with via lengths at their ends. */
+/**
+ * One step from each route vertex to the next, skipping zero-length ones,
+ * with layer change lengths at their ends. Null where the copper isn't
+ * continuous.
+ */
 function getTraceWalkFromVertices({
   vertices,
-}: {
-  vertices: TraceRouteVertex[]
-}): TraceWalk {
+  pcbStackup,
+  boardThickness,
+}: { vertices: TraceRouteVertex[] } & LayerChangeBoard): TraceWalk | null {
   const steps: TraceStep[] = []
   let distance = 0
   let pendingLayerChangeLengthMm = 0
+  let layer: LayerRef | undefined
   for (let index = 0; index < vertices.length; index++) {
     const from = vertices[index - 1]
     const to = vertices[index]
+    const arrivingLayer = layer ?? to.layers[0]
+    if (!to.layers.includes(arrivingLayer)) return null
     if (from !== undefined) {
       const length = Math.hypot(
         to.point.x - from.point.x,
         to.point.y - from.point.y,
       )
-      const width = from.width ?? to.width ?? steps[steps.length - 1]?.width
-      if (length > 0 && width !== undefined) {
+      if (length > 0) {
+        const width = from.width ?? to.width ?? steps[steps.length - 1]?.width
+        if (width === undefined) return null
         steps.push({
           start: from.point,
           end: to.point,
-          layer: to.layer,
+          layer: arrivingLayer,
           width,
           startDistance: distance,
           length,
           layerChangeLengthBeforeMm: pendingLayerChangeLengthMm,
           layerChangeLengthAfterMm: 0,
         })
+        pendingLayerChangeLengthMm = 0
+        distance += length
       }
-      if (length > 0) pendingLayerChangeLengthMm = 0
-      distance += length
     }
-    if (to.layerChangeLengthMm === 0) continue
-    distance += to.layerChangeLengthMm
-    pendingLayerChangeLengthMm += to.layerChangeLengthMm
+    layer = getDepartingLayer({ vertex: to, arrivingLayer })
+    const layerChangeLengthMm = getLayerChangeLength({
+      fromLayer: arrivingLayer,
+      toLayer: layer,
+      pcbStackup,
+      boardThickness,
+    })
+    if (layerChangeLengthMm === 0) continue
+    distance += layerChangeLengthMm
+    pendingLayerChangeLengthMm += layerChangeLengthMm
     const previous = steps[steps.length - 1]
     if (previous === undefined) continue
     steps[steps.length - 1] = {
       ...previous,
       layerChangeLengthAfterMm:
-        previous.layerChangeLengthAfterMm + to.layerChangeLengthMm,
+        previous.layerChangeLengthAfterMm + layerChangeLengthMm,
     }
   }
   return { steps, length: distance }
+}
+
+/** The layer copper leaves a vertex on: a wire point's own layer, or the other of the two layers a via joins. */
+function getDepartingLayer({
+  vertex,
+  arrivingLayer,
+}: {
+  vertex: TraceRouteVertex
+  arrivingLayer: LayerRef
+}): LayerRef {
+  if (vertex.layers.length === 1) return vertex.layers[0]
+  if (vertex.layers[0] === arrivingLayer) return vertex.layers[1]
+  return vertex.layers[0]
 }
 
 /** The steps with each one that carries straight on from the one before, with no via between, joined to it. */
@@ -171,55 +213,41 @@ export function reverseWalk(walk: TraceWalk): TraceWalk {
   }
 }
 
-/** The route's points in order, each with the copper arriving at it. */
+/** The route's points in order, each with the layers copper joins there. */
 function getTraceRouteVertices({
   trace,
-  pcbStackup,
-  boardThickness,
-}: { trace: PcbTrace } & LayerChangeBoard): TraceRouteVertex[] {
+}: {
+  trace: PcbTrace
+}): TraceRouteVertex[] {
   const vertices: TraceRouteVertex[] = []
   for (const routePoint of trace.route) {
     if (routePoint.route_type === "wire") {
       vertices.push({
         point: { x: routePoint.x, y: routePoint.y },
-        layer: routePoint.layer,
+        layers: [routePoint.layer],
         width: routePoint.width,
-        layerChangeLengthMm: 0,
       })
       continue
     }
     if (routePoint.route_type === "via") {
       vertices.push({
         point: { x: routePoint.x, y: routePoint.y },
-        layer: routePoint.from_layer,
+        layers: [routePoint.from_layer, routePoint.to_layer],
         width: undefined,
-        layerChangeLengthMm: getLayerChangeLength({
-          fromLayer: routePoint.from_layer,
-          toLayer: routePoint.to_layer,
-          pcbStackup,
-          boardThickness,
-        }),
       })
       continue
     }
-    // A through-pad point is a straight run across the pad, which then
-    // changes layers like a via when its end layer differs.
+    // A through-pad point is a straight run across the pad on its start
+    // layer, whose far end joins its start and end layers like a via.
     vertices.push({
       point: routePoint.start,
-      layer: routePoint.start_layer,
+      layers: [routePoint.start_layer],
       width: routePoint.width,
-      layerChangeLengthMm: 0,
     })
     vertices.push({
       point: routePoint.end,
-      layer: routePoint.start_layer,
+      layers: [routePoint.start_layer, routePoint.end_layer],
       width: routePoint.width,
-      layerChangeLengthMm: getLayerChangeLength({
-        fromLayer: routePoint.start_layer,
-        toLayer: routePoint.end_layer,
-        pcbStackup,
-        boardThickness,
-      }),
     })
   }
   return vertices
