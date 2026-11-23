@@ -4,15 +4,9 @@ import type { PhaseSkewSegment } from "lib/index"
  * The horizontal phase skew segment that covers `x`, optionally at height `y`.
  * Throws when there is none, so a test can't pass on a missing segment.
  */
-export function segmentAtX({
-  segments,
-  x,
-  y,
-}: {
-  segments: PhaseSkewSegment[]
-  x: number
-  y?: number
-}): PhaseSkewSegment {
+export function segmentAtX<
+  Segment extends Pick<PhaseSkewSegment, "start" | "end">,
+>({ segments, x, y }: { segments: Segment[]; x: number; y?: number }): Segment {
   const segment = segments.find(
     (candidate) =>
       candidate.start.y === candidate.end.y &&

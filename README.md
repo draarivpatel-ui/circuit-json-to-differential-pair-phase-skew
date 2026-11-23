@@ -21,10 +21,23 @@ bun add github:tscircuit/circuit-json-to-differential-pair-phase-skew
 ```
 
 ```ts
-import {
-  DEFAULT_PHASE_SKEW_COLORS,
-  getDifferentialPairPhaseSkew,
-} from "circuit-json-to-differential-pair-phase-skew"
+import { getDifferentialPairPhaseSkewStrokes } from "circuit-json-to-differential-pair-phase-skew"
+
+const strokes = getDifferentialPairPhaseSkewStrokes(circuitJson, {
+  colors: { zero: "#fff1bc" },
+})
+```
+
+Each stroke has a `layer`, `start`, `end`, `width` in mm, and an opaque RGB
+`color`. Draw it with round caps over its layer's copper and below drill
+holes. Stroke widths are 1.1 times the copper width.
+
+Colours default to `DEFAULT_PHASE_SKEW_COLORS`. Partial overrides accept
+`#RGB`, `#RRGGBB`, and comma-separated numeric `rgb()`. An invalid override
+warns and uses the corresponding default.
+
+```ts
+import { getDifferentialPairPhaseSkew } from "circuit-json-to-differential-pair-phase-skew"
 
 for (const pair of getDifferentialPairPhaseSkew({ circuitJson })) {
   pair.max_abs_phase_skew // largest phase skew magnitude on the pair, mm; absent when unknown everywhere
@@ -36,8 +49,8 @@ for (const pair of getDifferentialPairPhaseSkew({ circuitJson })) {
 }
 ```
 
-Each trace's `segments` cover its whole route. Colour them with
-`DEFAULT_PHASE_SKEW_COLORS` (KiCad's): white at zero, blending to blue up to
+Each trace's `segments` cover its whole route. The default colours follow
+KiCad's palette with white at zero, blending to blue up to
 the trace's `max_phase_skew` and to red down to its `min_phase_skew`, grey
 where `phase_skew` is absent.
 
