@@ -1,8 +1,4 @@
-import {
-  type CircuitJsonUtilObjects,
-  getPlatedHolePolygon,
-  getSmtPadPolygon,
-} from "@tscircuit/circuit-json-util"
+import type { CircuitJsonUtilObjects } from "@tscircuit/circuit-json-util"
 import type {
   LayerRef,
   PcbPort,
@@ -11,26 +7,34 @@ import type {
   PcbTraceRoutePointWire,
   Point,
 } from "circuit-json"
-
-/** A pad's copper outline, as circuit-json-util builds it. */
-type PadOutline = ReturnType<typeof getSmtPadPolygon>
+import {
+  getPlatedHoleOutline,
+  getSmtPadOutline,
+  isInsidePadOutline,
+  type PadOutline,
+} from "./get-pad-outline"
 
 /**
- * Where a route first leaves a pad: the index of the last route point inside
- * it, and that wire point moved to the pad's edge.
+ * How one end of a route is clipped to its pad: the end point is kept, then
+ * `insertedWire` (a wire point moved to the pad's edge), then the route
+ * from `keptIndex` away from that end.
  */
-type PadExit = { lastInsideIndex: number; exitWire: PcbTraceRoutePointWire }
+type PadClip = {
+  keptIndex: number
+  insertedWire: PcbTraceRoutePointWire
+}
 
 /** Halvings of the segment that crosses a pad's edge; 40 locate the edge to under a picometre on any board. */
 const PAD_EXIT_BISECTION_STEPS = 40
 
 /**
- * The trace's route with the copper inside its start and end pads replaced
- * by a straight line from the route's end to where it first leaves the pad,
- * as KiCad's tuning path clips routing inside pads (`OptimiseTraceInPad`).
- * A jog hidden inside a pad so adds no phase skew. Only the wire points on
- * the end point's layer before the first via are clipped, against the pad
- * of the end's port on that layer.
+ * The route with the copper inside its start and end pads replaced by a
+ * straight line from the route's end to where it first leaves the pad, as
+ * KiCad's tuning path clips routing inside pads (`OptimiseTraceInPad`). A
+ * jog hidden inside a pad, or inside its drill, so adds no phase skew. Only
+ * the wire points on the end point's layer before the first via are
+ * clipped, against the outer copper outline of the end port's pad on that
+ * layer.
  */
 export function clipRouteToTerminalPads({
   trace,
@@ -44,7 +48,7 @@ export function clipRouteToTerminalPads({
   const last = route[route.length - 1]
   let clippedRoute = route
   if (first?.route_type === "wire") {
-    const startExit = findPadExit({
+    const startClip = findPadClip({
       route,
       endWire: first,
       endIndex: 0,
@@ -55,16 +59,16 @@ export function clipRouteToTerminalPads({
         layer: first.layer,
       }),
     })
-    if (startExit !== null) {
+    if (startClip !== null) {
       clippedRoute = [
         first,
-        startExit.exitWire,
-        ...route.slice(startExit.lastInsideIndex + 1),
+        startClip.insertedWire,
+        ...route.slice(startClip.keptIndex),
       ]
     }
   }
   if (last?.route_type !== "wire") return clippedRoute
-  const endExit = findPadExit({
+  const endClip = findPadClip({
     route: clippedRoute,
     endWire: last,
     endIndex: clippedRoute.length - 1,
@@ -75,15 +79,15 @@ export function clipRouteToTerminalPads({
       layer: last.layer,
     }),
   })
-  if (endExit === null) return clippedRoute
+  if (endClip === null) return clippedRoute
   return [
-    ...clippedRoute.slice(0, endExit.lastInsideIndex),
-    endExit.exitWire,
+    ...clippedRoute.slice(0, endClip.keptIndex + 1),
+    endClip.insertedWire,
     last,
   ]
 }
 
-/** The outline of the pad of a port on a copper layer, or null when it has none there. */
+/** The outer outline of the pad of a port on a copper layer, or null when it has none there. */
 function getPortPadOutline({
   db,
   pcbPortId,
@@ -97,21 +101,26 @@ function getPortPadOutline({
   const smtPad = db.pcb_smtpad
     .list({ pcb_port_id: pcbPortId })
     .find((pad) => pad.layer === layer)
-  if (smtPad !== undefined) return getSmtPadPolygon(smtPad)
+  if (smtPad !== undefined) return getSmtPadOutline(smtPad)
   const platedHole = db.pcb_plated_hole
     .list({ pcb_port_id: pcbPortId })
     .find((hole) => hole.layers.includes(layer))
-  if (platedHole !== undefined) return getPlatedHolePolygon(platedHole)
-  return null
+  if (platedHole === undefined) return null
+  let componentCcwRotationDegrees = 0
+  if (platedHole.pcb_component_id !== undefined) {
+    componentCcwRotationDegrees =
+      db.pcb_component.get(platedHole.pcb_component_id)?.rotation ?? 0
+  }
+  return getPlatedHoleOutline({ platedHole, componentCcwRotationDegrees })
 }
 
 /**
  * Walks from one end of the route through the wire points on that end's
  * layer, up to the first via or layer change, and finds where it first
- * leaves the pad. Null when there is no pad or no route point inside it to
- * clip.
+ * leaves the pad. Null when there is no pad or nothing to clip: the route
+ * leaves the pad straight from its end.
  */
-function findPadExit({
+function findPadClip({
   route,
   endWire,
   endIndex,
@@ -125,7 +134,7 @@ function findPadExit({
   /** 1 to walk from the start of the route, -1 from its end. */
   direction: 1 | -1
   padOutline: PadOutline | null
-}): PadExit | null {
+}): PadClip | null {
   if (padOutline === null) return null
   let lastInsideWire = endWire
   for (
@@ -136,20 +145,20 @@ function findPadExit({
     const routePoint = route[index]
     if (routePoint.route_type !== "wire") return null
     if (routePoint.layer !== endWire.layer) return null
-    if (isInsidePad({ padOutline, point: routePoint })) {
+    const position = { x: routePoint.x, y: routePoint.y }
+    if (isInsidePadOutline({ padOutline, point: position })) {
       lastInsideWire = routePoint
       continue
     }
-    const lastInsideIndex = index - direction
-    if (lastInsideIndex === endIndex) return null
+    if (index - direction === endIndex) return null
     return {
-      lastInsideIndex,
-      exitWire: {
+      keptIndex: index,
+      insertedWire: {
         ...lastInsideWire,
         ...getPadExitPoint({
           padOutline,
           inside: lastInsideWire,
-          outside: routePoint,
+          outside: position,
         }),
       },
     }
@@ -172,31 +181,13 @@ function getPadExitPoint({
   for (let step = 0; step < PAD_EXIT_BISECTION_STEPS; step++) {
     const middleFraction = (insideFraction + outsideFraction) / 2
     const middle = pointAlong({ inside, outside, fraction: middleFraction })
-    if (isInsidePad({ padOutline, point: middle })) {
+    if (isInsidePadOutline({ padOutline, point: middle })) {
       insideFraction = middleFraction
       continue
     }
     outsideFraction = middleFraction
   }
   return pointAlong({ inside, outside, fraction: insideFraction })
-}
-
-/**
- * True when a point lies inside or on the edge of a pad's copper outline.
- * The outline only tests points of its own flatten-js class, so the point is
- * made by moving the outline's own bounding box centre.
- */
-function isInsidePad({
-  padOutline,
-  point,
-}: {
-  padOutline: PadOutline
-  point: Point
-}): boolean {
-  const { center } = padOutline.box
-  return padOutline.contains(
-    center.translate(point.x - center.x, point.y - center.y),
-  )
 }
 
 /** The point a fraction of the way from `inside` to `outside`. */
