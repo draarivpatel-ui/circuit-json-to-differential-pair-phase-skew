@@ -21,7 +21,21 @@ bun add github:tscircuit/circuit-json-to-differential-pair-phase-skew
 ```
 
 ```ts
-import { DEFAULT_PHASE_SKEW_COLORS } from "circuit-json-to-differential-pair-phase-skew"
+import {
+  DEFAULT_PHASE_SKEW_COLORS,
+  getDifferentialPairPhaseSkew,
+} from "circuit-json-to-differential-pair-phase-skew"
 
-DEFAULT_PHASE_SKEW_COLORS.positive // "rgb(0, 0, 255)"
+for (const pair of getDifferentialPairPhaseSkew({ circuitJson })) {
+  pair.max_abs_phase_skew // largest phase skew on the pair, mm
+  pair.end_to_end_length_delta // positive minus negative routed length, mm
+  for (const segment of pair.positive_trace.segments) {
+    segment.phase_skew // mm this trace is ahead (+) or behind (-) its partner; absent when unknown
+  }
+}
 ```
+
+Each trace's `segments` cover its whole route. Colour them with
+`DEFAULT_PHASE_SKEW_COLORS` (KiCad's): white at zero, blending to blue up to
+the trace's `max_phase_skew` and to red down to its `min_phase_skew`, grey
+where `phase_skew` is absent.
