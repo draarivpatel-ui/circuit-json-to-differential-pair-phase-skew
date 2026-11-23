@@ -25,9 +25,6 @@ import { type TraceWalk, reverseWalk, walkTrace } from "./walk-trace"
 /** Board thickness in mm assumed for a pair that is routed without a board. */
 const STANDARD_BOARD_THICKNESS = 1.6
 
-/** The board owning each element, by its id, as `createBoardOwnerMap` resolves it. */
-type BoardOwnerMap = ReturnType<typeof createBoardOwnerMap>
-
 /** The positive and negative walks of a pair, each oriented from its source end. */
 type PairWalks = { positive: TraceWalk; negative: TraceWalk }
 
@@ -66,14 +63,20 @@ export function getDifferentialPairPhaseSkew({
       source_trace_id: negative_source_trace_id,
     })
     if (positiveTraces.length !== 1 || negativeTraces.length !== 1) continue
+    const pairWalks = walkPair({
+      positiveTrace: positiveTraces[0],
+      negativeTrace: negativeTraces[0],
+      db,
+      board: boardOwnerMap.get(positiveTraces[0].pcb_trace_id),
+    })
+    if (pairWalks === null) continue
     pairs.push(
       getPairPhaseSkew({
         bus,
         trace_gap: differentialPair.trace_gap,
         positiveTrace: positiveTraces[0],
         negativeTrace: negativeTraces[0],
-        db,
-        boardOwnerMap,
+        pairWalks,
       }),
     )
   }
@@ -86,23 +89,16 @@ function getPairPhaseSkew({
   trace_gap,
   positiveTrace,
   negativeTrace,
-  db,
-  boardOwnerMap,
+  pairWalks,
 }: {
   bus: SourceBus
   /** The pair's declared edge-to-edge gap in mm, if any. */
   trace_gap: number | undefined
   positiveTrace: PcbTrace
   negativeTrace: PcbTrace
-  db: CircuitJsonUtilObjects
-  boardOwnerMap: BoardOwnerMap
+  pairWalks: PairWalks
 }): DifferentialPairPhaseSkew {
-  const { positive, negative } = walkPair({
-    positiveTrace,
-    negativeTrace,
-    db,
-    board: boardOwnerMap.get(positiveTrace.pcb_trace_id),
-  })
+  const { positive, negative } = pairWalks
   const runs = findCoupledRuns({
     positive: positive.steps,
     negative: negative.steps,
@@ -153,7 +149,8 @@ function getPairPhaseSkew({
 
 /**
  * Walks both traces of a pair through their board's stackup, or its
- * thickness without one, and orients each walk from its source end.
+ * thickness without one, and orients each walk from its source end. Null
+ * when either trace can't be walked, so the pair is skipped.
  */
 function walkPair({
   positiveTrace,
@@ -165,15 +162,26 @@ function walkPair({
   negativeTrace: PcbTrace
   db: CircuitJsonUtilObjects
   board: PcbBoard | undefined
-}): PairWalks {
+}): PairWalks | null {
   let pcbStackup: PcbStackup | null = null
   let boardThickness = STANDARD_BOARD_THICKNESS
   if (board !== undefined) {
     pcbStackup = db.pcb_stackup.getWhere({ pcb_board_id: board.pcb_board_id })
     boardThickness = board.thickness
   }
-  let positive = walkTrace({ trace: positiveTrace, pcbStackup, boardThickness })
-  let negative = walkTrace({ trace: negativeTrace, pcbStackup, boardThickness })
+  const positiveWalk = walkTrace({
+    trace: positiveTrace,
+    pcbStackup,
+    boardThickness,
+  })
+  const negativeWalk = walkTrace({
+    trace: negativeTrace,
+    pcbStackup,
+    boardThickness,
+  })
+  if (positiveWalk === null || negativeWalk === null) return null
+  let positive = positiveWalk
+  let negative = negativeWalk
   const positiveOutput = outputEnd({ trace: positiveTrace, db })
   const negativeOutput = outputEnd({ trace: negativeTrace, db })
   if (positiveOutput === "end") positive = reverseWalk(positive)

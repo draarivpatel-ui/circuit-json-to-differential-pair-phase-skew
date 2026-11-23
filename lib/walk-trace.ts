@@ -48,14 +48,18 @@ type TraceRouteVertex = {
  *
  * Consecutive pieces that continue in a straight line on the same copper
  * are joined, so how finely a route is split into points doesn't matter.
+ *
+ * Null when the route has no planar copper, such as a via in pad joining
+ * two pads at the same point: there is nothing to measure phase skew along.
  */
 export function walkTrace({
   trace,
   pcbStackup,
   boardThickness,
-}: { trace: PcbTrace } & LayerChangeBoard): TraceWalk {
+}: { trace: PcbTrace } & LayerChangeBoard): TraceWalk | null {
   const vertices = getTraceRouteVertices({ trace, pcbStackup, boardThickness })
   const { steps, length } = getTraceWalkFromVertices({ vertices })
+  if (steps.length === 0) return null
   return { steps: joinStraightSteps({ steps }), length }
 }
 
