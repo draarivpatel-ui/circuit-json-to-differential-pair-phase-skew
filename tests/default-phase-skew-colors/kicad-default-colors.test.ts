@@ -1,5 +1,5 @@
 import { expect, test } from "bun:test"
-import { DEFAULT_PHASE_SKEW_COLORS } from "../../src"
+import { DEFAULT_PHASE_SKEW_COLORS } from "lib/index"
 
 test("default colours are KiCad's blue, red, white and grey", () => {
   expect(DEFAULT_PHASE_SKEW_COLORS).toEqual({

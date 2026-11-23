@@ -17,7 +17,7 @@ draw it.
 ## How to use it?
 
 ```bash
-bun add circuit-json-to-differential-pair-phase-skew
+bun add github:tscircuit/circuit-json-to-differential-pair-phase-skew
 ```
 
 ```ts
