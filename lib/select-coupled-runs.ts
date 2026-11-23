@@ -43,7 +43,11 @@ export function selectCoupledRuns(candidates: CandidateRun[]): CoupledRun[] {
   )
 }
 
-/** Trims candidates, nearest first, so no stretch of either trace is used twice. */
+/**
+ * Trims candidates, nearest first, so no stretch of either trace is used
+ * twice, and returns the pieces trimming cut from a candidate. A candidate
+ * no nearer one overlaps is already among the candidates whole.
+ */
 function trimNearestFirst(candidates: CandidateRun[]): CandidateRun[] {
   const order = [...candidates].sort(
     (a, b) =>
@@ -54,8 +58,9 @@ function trimNearestFirst(candidates: CandidateRun[]): CandidateRun[] {
   const usedNegative: Interval[] = []
   const pieces: CandidateRun[] = []
   for (const run of order) {
-    for (const free of freeParts({ run, usedPositive, usedNegative })) {
-      pieces.push(free)
+    const runParts = freeParts({ run, usedPositive, usedNegative })
+    for (const free of runParts) {
+      if (!isWholeRun({ run, runParts })) pieces.push(free)
       const positiveInterval = {
         start: free.positiveStartDistanceMm,
         end: free.positiveEndDistanceMm,
@@ -77,6 +82,21 @@ function trimNearestFirst(candidates: CandidateRun[]): CandidateRun[] {
     }
   }
   return pieces
+}
+
+/** True when `runParts`, the free parts of `run`, are the whole run. */
+function isWholeRun({
+  run,
+  runParts,
+}: {
+  run: CandidateRun
+  runParts: CandidateRun[]
+}): boolean {
+  if (runParts.length !== 1) return false
+  return (
+    runParts[0].positiveStartDistanceMm === run.positiveStartDistanceMm &&
+    runParts[0].positiveEndDistanceMm === run.positiveEndDistanceMm
+  )
 }
 
 /** The parts of `run` whose positive and negative stretches are both unused. */
