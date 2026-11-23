@@ -2,8 +2,8 @@ import { expect, test } from "bun:test"
 import { cju } from "@tscircuit/circuit-json-util"
 import { getDifferentialPairPhaseSkew } from "lib/index"
 import { walkTrace } from "lib/walk-trace"
-import { phaseSkewSvg } from "tests/fixtures/phase-skew-svg"
 import { renderPairBoard } from "tests/fixtures/pair-board"
+import { phaseSkewSvg } from "tests/fixtures/phase-skew-svg"
 import { segmentAtX } from "tests/fixtures/segment-at-x"
 
 test("colocated vias keep their full skew step between straight runs", async () => {

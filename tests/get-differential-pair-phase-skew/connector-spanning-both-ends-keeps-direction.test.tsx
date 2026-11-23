@@ -1,8 +1,8 @@
 import { expect, test } from "bun:test"
-import { phaseSkewSvg } from "tests/fixtures/phase-skew-svg"
 import { getDifferentialPairPhaseSkew } from "lib/index"
-import { renderSpanningConnectorBoard } from "tests/fixtures/spanning-connector-board"
+import { phaseSkewSvg } from "tests/fixtures/phase-skew-svg"
 import { segmentAtX } from "tests/fixtures/segment-at-x"
+import { renderSpanningConnectorBoard } from "tests/fixtures/spanning-connector-board"
 
 test("a connector at the start of one trace and the end of the other doesn't flip the pair", async () => {
   const circuitJson = await renderSpanningConnectorBoard()

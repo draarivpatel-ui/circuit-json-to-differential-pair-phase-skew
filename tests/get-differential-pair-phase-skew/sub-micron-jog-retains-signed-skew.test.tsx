@@ -1,7 +1,7 @@
 import { expect, test } from "bun:test"
 import { getDifferentialPairPhaseSkew } from "lib/index"
-import { phaseSkewSvg } from "tests/fixtures/phase-skew-svg"
 import { renderPairBoard } from "tests/fixtures/pair-board"
+import { phaseSkewSvg } from "tests/fixtures/phase-skew-svg"
 import { segmentAtX } from "tests/fixtures/segment-at-x"
 
 /** Extra copper added by the 0.5 µm triangular jog (~0.00041 mm, below 0.0005 mm). */

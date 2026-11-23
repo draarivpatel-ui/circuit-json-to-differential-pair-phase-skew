@@ -1,10 +1,10 @@
 import { expect, test } from "bun:test"
-import { phaseSkewSvg } from "tests/fixtures/phase-skew-svg"
 import { getDifferentialPairPhaseSkew } from "lib/index"
 import {
   DETOUR_EXTRA_LENGTH,
   renderDifferentialPairBoard,
 } from "tests/fixtures/differential-pair-board"
+import { phaseSkewSvg } from "tests/fixtures/phase-skew-svg"
 import { segmentAtX } from "tests/fixtures/segment-at-x"
 
 test("positive trace is longer by the detour length between the detours", async () => {

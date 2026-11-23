@@ -2,12 +2,12 @@ import { expect, test } from "bun:test"
 import { cju } from "@tscircuit/circuit-json-util"
 import type { AnyCircuitElement } from "circuit-json"
 import { getDifferentialPairPhaseSkew } from "lib/index"
-import { phaseSkewSvg } from "tests/fixtures/phase-skew-svg"
 import {
   PairBoard,
-  renderPairBoard,
   type PairPathPoint,
+  renderPairBoard,
 } from "tests/fixtures/pair-board"
+import { phaseSkewSvg } from "tests/fixtures/phase-skew-svg"
 import { renderCircuit } from "tests/fixtures/render-circuit"
 
 const VIA_HOP: PairPathPoint[] = [

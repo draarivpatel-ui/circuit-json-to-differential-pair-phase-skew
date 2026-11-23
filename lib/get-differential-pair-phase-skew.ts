@@ -11,17 +11,17 @@ import type {
   SourceBus,
 } from "circuit-json"
 import { clipRouteToTerminalPads } from "./clip-route-to-terminal-pads"
-import type { LayerChangeBoard } from "./get-layer-change-length"
 import type {
   DifferentialPairPhaseSkew,
   PhaseSkewTrace,
 } from "./differential-pair-phase-skew"
 import { findCoupledRuns } from "./find-coupled-runs"
-import { type PhaseSkewTrack, getPhaseSkewTrack } from "./get-phase-skew-track"
+import type { LayerChangeBoard } from "./get-layer-change-length"
+import { getPhaseSkewTrack, type PhaseSkewTrack } from "./get-phase-skew-track"
 import { haveOppositeTraceWalkDirections } from "./have-opposite-trace-walk-directions"
 import { roundPhaseSkew } from "./round-phase-skew"
 import { samplePhaseSkew } from "./sample-phase-skew"
-import { type TraceWalk, reverseWalk, walkTrace } from "./walk-trace"
+import { reverseWalk, type TraceWalk, walkTrace } from "./walk-trace"
 
 /** Board thickness in mm assumed for a pair that is routed without a board. */
 const STANDARD_BOARD_THICKNESS = 1.6

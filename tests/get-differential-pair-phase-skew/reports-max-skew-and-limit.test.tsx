@@ -1,11 +1,11 @@
 import { expect, test } from "bun:test"
-import { phaseSkewSvg } from "tests/fixtures/phase-skew-svg"
 import { cju } from "@tscircuit/circuit-json-util"
 import { getDifferentialPairPhaseSkew } from "lib/index"
 import {
   DETOUR_EXTRA_LENGTH,
   renderDifferentialPairBoard,
 } from "tests/fixtures/differential-pair-board"
+import { phaseSkewSvg } from "tests/fixtures/phase-skew-svg"
 
 test("reports the pair's largest phase skew and its maxLengthSkew", async () => {
   const circuitJson = await renderDifferentialPairBoard({ compensated: true })

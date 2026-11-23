@@ -1,7 +1,7 @@
 import { expect, test } from "bun:test"
-import { phaseSkewSvg } from "tests/fixtures/phase-skew-svg"
 import { getDifferentialPairPhaseSkew } from "lib/index"
 import { renderPairBoard } from "tests/fixtures/pair-board"
+import { phaseSkewSvg } from "tests/fixtures/phase-skew-svg"
 
 test("a run with constant skew is one segment, not one per sample", async () => {
   // An asymmetric detour leaves a constant skew whose two ends differ in

@@ -1,7 +1,7 @@
 import { expect, test } from "bun:test"
-import { phaseSkewSvg } from "tests/fixtures/phase-skew-svg"
 import { getDifferentialPairPhaseSkew } from "lib/index"
 import { renderPairBoard } from "tests/fixtures/pair-board"
+import { phaseSkewSvg } from "tests/fixtures/phase-skew-svg"
 
 /** How far DN's corners sit along the route from DP's on a 45° bend, 0.6 mm apart. */
 const CORNER_SHIFT = 0.6 * Math.tan(Math.PI / 8)

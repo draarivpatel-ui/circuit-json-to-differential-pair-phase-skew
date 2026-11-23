@@ -1,6 +1,6 @@
 import { expect, test } from "bun:test"
-import { createBasicAutorouter } from "tests/fixtures/create-basic-autorouter"
 import { getDifferentialPairPhaseSkew } from "lib/index"
+import { createBasicAutorouter } from "tests/fixtures/create-basic-autorouter"
 import { phaseSkewSvg } from "tests/fixtures/phase-skew-svg"
 import { renderCircuit } from "tests/fixtures/render-circuit"
 

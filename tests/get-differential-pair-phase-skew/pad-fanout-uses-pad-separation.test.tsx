@@ -1,7 +1,7 @@
 import { expect, test } from "bun:test"
 import { getDifferentialPairPhaseSkew } from "lib/index"
-import { phaseSkewSvg } from "tests/fixtures/phase-skew-svg"
 import { renderPairBoard } from "tests/fixtures/pair-board"
+import { phaseSkewSvg } from "tests/fixtures/phase-skew-svg"
 import { segmentAtX } from "tests/fixtures/segment-at-x"
 
 /** Extra length added by each 0.9 mm square detour on the fan-in/fan-out. */

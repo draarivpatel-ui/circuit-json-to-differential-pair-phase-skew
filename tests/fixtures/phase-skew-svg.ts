@@ -3,9 +3,9 @@ import { cju } from "@tscircuit/circuit-json-util"
 import type { AnyCircuitElement, PcbTraceRoutePoint, Point } from "circuit-json"
 import {
   DEFAULT_PHASE_SKEW_COLORS,
+  getDifferentialPairPhaseSkew,
   type PhaseSkewSegment,
   type PhaseSkewTrace,
-  getDifferentialPairPhaseSkew,
 } from "lib/index"
 
 /** Overlay stroke width relative to the trace, matching KiCad's 1.1× inflation. */

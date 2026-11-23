@@ -1,7 +1,7 @@
 import { expect, test } from "bun:test"
-import { phaseSkewSvg } from "tests/fixtures/phase-skew-svg"
 import { getDifferentialPairPhaseSkew } from "lib/index"
 import { renderPairBoard } from "tests/fixtures/pair-board"
+import { phaseSkewSvg } from "tests/fixtures/phase-skew-svg"
 
 /** DN's slanted 20 mm run is this much longer than DP's straight one, in mm. */
 const SLANT_EXTRA_LENGTH = Math.hypot(20, 0.1) - 20

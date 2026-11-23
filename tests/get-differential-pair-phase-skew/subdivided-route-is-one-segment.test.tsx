@@ -1,7 +1,7 @@
 import { expect, test } from "bun:test"
-import { phaseSkewSvg } from "tests/fixtures/phase-skew-svg"
 import { getDifferentialPairPhaseSkew } from "lib/index"
 import { type PairPathPoint, renderPairBoard } from "tests/fixtures/pair-board"
+import { phaseSkewSvg } from "tests/fixtures/phase-skew-svg"
 
 test("a straight route split into many points is measured as one segment", async () => {
   const everyMillimetre: PairPathPoint[] = []

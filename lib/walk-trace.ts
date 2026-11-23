@@ -5,8 +5,8 @@ import type {
   Point,
 } from "circuit-json"
 import {
-  type LayerChangeBoard,
   getLayerChangeLength,
+  type LayerChangeBoard,
 } from "./get-layer-change-length"
 
 /**

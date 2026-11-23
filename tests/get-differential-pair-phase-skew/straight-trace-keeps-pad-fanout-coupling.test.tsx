@@ -1,7 +1,7 @@
 import { expect, test } from "bun:test"
 import { getDifferentialPairPhaseSkew } from "lib/index"
-import { phaseSkewSvg } from "tests/fixtures/phase-skew-svg"
 import { type PairPathPoint, renderPairBoard } from "tests/fixtures/pair-board"
+import { phaseSkewSvg } from "tests/fixtures/phase-skew-svg"
 import { segmentAtX } from "tests/fixtures/segment-at-x"
 
 /** Extra length of each 2 mm × 2.4 mm fan-in / fan-out diagonal on DN. */

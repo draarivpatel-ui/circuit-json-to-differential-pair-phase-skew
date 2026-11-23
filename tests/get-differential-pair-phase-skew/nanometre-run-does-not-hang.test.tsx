@@ -1,7 +1,7 @@
 import { expect, test } from "bun:test"
 import { getDifferentialPairPhaseSkew } from "lib/index"
-import { phaseSkewSvg } from "tests/fixtures/phase-skew-svg"
 import { renderPairBoard } from "tests/fixtures/pair-board"
+import { phaseSkewSvg } from "tests/fixtures/phase-skew-svg"
 
 test("a coupled stretch right at the 1 nm overlap threshold finishes without hanging", async () => {
   // DN only comes beside DP for 1 nm between x = 4 and x = 4.000001, just

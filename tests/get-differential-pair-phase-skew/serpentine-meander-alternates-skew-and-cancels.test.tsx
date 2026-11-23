@@ -1,8 +1,8 @@
-import type { PhaseSkewSegment } from "lib/index"
 import { expect, test } from "bun:test"
+import type { PhaseSkewSegment } from "lib/index"
 import { getDifferentialPairPhaseSkew } from "lib/index"
-import { phaseSkewSvg } from "tests/fixtures/phase-skew-svg"
 import { renderPairBoard } from "tests/fixtures/pair-board"
+import { phaseSkewSvg } from "tests/fixtures/phase-skew-svg"
 import { segmentAtX } from "tests/fixtures/segment-at-x"
 
 /** The vertical overlay segment at `x` that covers `y`. */

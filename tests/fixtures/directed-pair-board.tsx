@@ -1,7 +1,7 @@
 import type { AnyCircuitElement } from "circuit-json"
 import type { ReactElement } from "react"
-import { renderCircuit } from "./render-circuit"
 import { DETOUR_EXTRA_LENGTH } from "./differential-pair-board"
+import { renderCircuit } from "./render-circuit"
 
 export { DETOUR_EXTRA_LENGTH }
 
