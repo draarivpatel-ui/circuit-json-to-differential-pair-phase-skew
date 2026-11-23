@@ -16,12 +16,13 @@ import {
 
 /**
  * How one end of a route is clipped to its pad: the end point is kept, then
- * `insertedWire` (a wire point moved to the pad's edge), then the route
- * from `keptIndex` away from that end.
+ * `insertedWire` (a wire point moved to the pad's edge, or null when the
+ * route goes straight on to a via inside the pad), then the route from
+ * `keptIndex` away from that end.
  */
 type PadClip = {
   keptIndex: number
-  insertedWire: PcbTraceRoutePointWire
+  insertedWire: PcbTraceRoutePointWire | null
 }
 
 /** Halvings of the segment that crosses a pad's edge; 40 locate the edge to under a picometre on any board. */
@@ -31,10 +32,10 @@ const PAD_EXIT_BISECTION_STEPS = 40
  * The route with the copper inside its start and end pads replaced by a
  * straight line from the route's end to where it first leaves the pad, as
  * KiCad's tuning path clips routing inside pads (`OptimiseTraceInPad`). A
- * jog hidden inside a pad, or inside its drill, so adds no phase skew. Only
- * the wire points on the end point's layer before the first via are
- * clipped, against the outer copper outline of the end port's pad on that
- * layer.
+ * jog hidden inside a pad, or inside its drill, so adds no phase skew. When
+ * the route stays inside the pad up to a via, it runs straight to the via,
+ * which keeps its layer change. Pads are the end ports' pads on the end
+ * point's layer, measured by their outer copper outline.
  */
 export function clipRouteToTerminalPads({
   trace,
@@ -60,11 +61,11 @@ export function clipRouteToTerminalPads({
       }),
     })
     if (startClip !== null) {
-      clippedRoute = [
-        first,
-        startClip.insertedWire,
-        ...route.slice(startClip.keptIndex),
-      ]
+      const startOfRoute: PcbTraceRoutePoint[] = [first]
+      if (startClip.insertedWire !== null) {
+        startOfRoute.push(startClip.insertedWire)
+      }
+      clippedRoute = startOfRoute.concat(route.slice(startClip.keptIndex))
     }
   }
   if (last?.route_type !== "wire") return clippedRoute
@@ -80,11 +81,10 @@ export function clipRouteToTerminalPads({
     }),
   })
   if (endClip === null) return clippedRoute
-  return [
-    ...clippedRoute.slice(0, endClip.keptIndex + 1),
-    endClip.insertedWire,
-    last,
-  ]
+  const endOfRoute = clippedRoute.slice(0, endClip.keptIndex + 1)
+  if (endClip.insertedWire !== null) endOfRoute.push(endClip.insertedWire)
+  endOfRoute.push(last)
+  return endOfRoute
 }
 
 /** The outer outline of the pad of a port on a copper layer, or null when it has none there. */
@@ -116,9 +116,9 @@ function getPortPadOutline({
 
 /**
  * Walks from one end of the route through the wire points on that end's
- * layer, up to the first via or layer change, and finds where it first
- * leaves the pad. Null when there is no pad or nothing to clip: the route
- * leaves the pad straight from its end.
+ * layer and finds where it first leaves the pad, or the via it reaches
+ * while still inside. Null when there is no pad or nothing to clip: the
+ * route leaves the pad, or reaches the via, straight from its end.
  */
 function findPadClip({
   route,
@@ -143,14 +143,24 @@ function findPadClip({
     index += direction
   ) {
     const routePoint = route[index]
-    if (routePoint.route_type !== "wire") return null
-    if (routePoint.layer !== endWire.layer) return null
-    const position = { x: routePoint.x, y: routePoint.y }
-    if (isInsidePadOutline({ padOutline, point: position })) {
-      lastInsideWire = routePoint
-      continue
+    if (routePoint.route_type === "through_pad") return null
+    if (
+      routePoint.route_type === "wire" &&
+      routePoint.layer !== endWire.layer
+    ) {
+      return null
     }
-    if (index - direction === endIndex) return null
+    const position = { x: routePoint.x, y: routePoint.y }
+    const isBesideEnd = index - direction === endIndex
+    if (isInsidePadOutline({ padOutline, point: position })) {
+      if (routePoint.route_type === "wire") {
+        lastInsideWire = routePoint
+        continue
+      }
+      if (isBesideEnd) return null
+      return { keptIndex: index, insertedWire: null }
+    }
+    if (isBesideEnd) return null
     return {
       keptIndex: index,
       insertedWire: {
