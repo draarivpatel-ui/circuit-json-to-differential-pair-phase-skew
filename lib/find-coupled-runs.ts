@@ -18,15 +18,15 @@ const SPACING_ALLOWANCE = 1.2
 const UNSET_GAP_REACH_WIDTHS = 10
 
 /** A positive and a negative step that run parallel, with the negative step placed in the positive step's frame. */
-type ParallelPair = {
+type ParallelTraceStepPair = {
   positiveStep: TraceStep
   negativeStep: TraceStep
   /** Where the negative step's ends fall along the positive step, in mm from its start. */
-  negativeStartAlong: number
-  negativeEndAlong: number
+  negativeStartAlongPositiveStepMm: number
+  negativeEndAlongPositiveStepMm: number
   /** Signed distances of the negative step's ends from the positive step's centreline, in mm. */
-  negativeStartOffset: number
-  negativeEndOffset: number
+  negativeStartNormalOffsetMm: number
+  negativeEndNormalOffsetMm: number
 }
 
 /**
@@ -56,12 +56,12 @@ export function findCoupledRuns({
   const positiveBefore = sliceSteps({
     steps: positive,
     from: 0,
-    to: first.positiveStart,
+    to: first.positiveStartDistanceMm,
   })
   const negativeBefore = sliceSteps({
     steps: negative,
     from: 0,
-    to: first.negativeStart,
+    to: first.negativeStartDistanceMm,
   })
   let beforeRuns: CoupledRun[] = []
   if (positiveBefore.length > 0 && negativeBefore.length > 0) {
@@ -77,12 +77,12 @@ export function findCoupledRuns({
 
   const positiveAfter = sliceSteps({
     steps: positive,
-    from: last.positiveEnd,
+    from: last.positiveEndDistanceMm,
     to: Number.POSITIVE_INFINITY,
   })
   const negativeAfter = sliceSteps({
     steps: negative,
-    from: last.negativeEnd,
+    from: last.negativeEndDistanceMm,
     to: Number.POSITIVE_INFINITY,
   })
   let afterRuns: CoupledRun[] = []
@@ -185,9 +185,9 @@ function findParallelPairs({
   positive: TraceStep[]
   negative: TraceStep[]
   reach: number
-}): ParallelPair[] {
+}): ParallelTraceStepPair[] {
   const grid = buildStepGrid({ steps: negative, reach })
-  const pairs: ParallelPair[] = []
+  const pairs: ParallelTraceStepPair[] = []
   for (const positiveStep of positive) {
     const direction = unitDirection(positiveStep)
     for (const negativeStep of stepsNear({ grid, step: positiveStep })) {
@@ -198,31 +198,34 @@ function findParallelPairs({
         direction.x * negativeDirection.x + direction.y * negativeDirection.y
       if (cosine < PARALLEL_COSINE) continue
 
-      const negativeStartAlong = along({
+      const negativeStartAlongPositiveStepMm = along({
         direction,
         origin: positiveStep.start,
         point: negativeStep.start,
       })
-      const negativeEndAlong = along({
+      const negativeEndAlongPositiveStepMm = along({
         direction,
         origin: positiveStep.start,
         point: negativeStep.end,
       })
       // Cheap reject before building a pair: the steps don't overlap at all.
-      if (negativeEndAlong <= 0 || negativeStartAlong >= positiveStep.length) {
+      if (
+        negativeEndAlongPositiveStepMm <= 0 ||
+        negativeStartAlongPositiveStepMm >= positiveStep.length
+      ) {
         continue
       }
       pairs.push({
         positiveStep,
         negativeStep,
-        negativeStartAlong,
-        negativeEndAlong,
-        negativeStartOffset: across({
+        negativeStartAlongPositiveStepMm,
+        negativeEndAlongPositiveStepMm,
+        negativeStartNormalOffsetMm: across({
           direction,
           origin: positiveStep.start,
           point: negativeStep.start,
         }),
-        negativeEndOffset: across({
+        negativeEndNormalOffsetMm: across({
           direction,
           origin: positiveStep.start,
           point: negativeStep.end,
@@ -241,44 +244,46 @@ function clipToSpacing({
   pair,
   maxOffset,
 }: {
-  pair: ParallelPair
+  pair: ParallelTraceStepPair
   maxOffset: number
 }): CandidateRun | null {
   const {
     positiveStep,
-    negativeStartAlong,
-    negativeEndAlong,
-    negativeStartOffset,
-    negativeEndOffset,
+    negativeStartAlongPositiveStepMm,
+    negativeEndAlongPositiveStepMm,
+    negativeStartNormalOffsetMm,
+    negativeEndNormalOffsetMm,
   } = pair
-  let from = Math.max(0, negativeStartAlong)
-  let to = Math.min(positiveStep.length, negativeEndAlong)
+  let from = Math.max(0, negativeStartAlongPositiveStepMm)
+  let to = Math.min(positiveStep.length, negativeEndAlongPositiveStepMm)
 
   // The offset changes linearly along the step; keep where |offset| <= maxOffset.
   const offsetSlope =
-    (negativeEndOffset - negativeStartOffset) /
-    (negativeEndAlong - negativeStartAlong)
-  if (offsetSlope === 0 && Math.abs(negativeStartOffset) > maxOffset) {
+    (negativeEndNormalOffsetMm - negativeStartNormalOffsetMm) /
+    (negativeEndAlongPositiveStepMm - negativeStartAlongPositiveStepMm)
+  if (offsetSlope === 0 && Math.abs(negativeStartNormalOffsetMm) > maxOffset) {
     return null
   }
   if (offsetSlope !== 0) {
     const atPlus =
-      negativeStartAlong + (maxOffset - negativeStartOffset) / offsetSlope
+      negativeStartAlongPositiveStepMm +
+      (maxOffset - negativeStartNormalOffsetMm) / offsetSlope
     const atMinus =
-      negativeStartAlong + (-maxOffset - negativeStartOffset) / offsetSlope
+      negativeStartAlongPositiveStepMm +
+      (-maxOffset - negativeStartNormalOffsetMm) / offsetSlope
     from = Math.max(from, Math.min(atPlus, atMinus))
     to = Math.min(to, Math.max(atPlus, atMinus))
   }
   if (to - from <= MIN_OVERLAP) return null
 
   return {
-    positiveStart: positiveStep.startDistance + from,
-    positiveEnd: positiveStep.startDistance + to,
-    negativeStart: negativeDistanceAt({ pair, position: from }),
-    negativeEnd: negativeDistanceAt({ pair, position: to }),
-    offset: Math.abs(
-      negativeStartOffset +
-        offsetSlope * ((from + to) / 2 - negativeStartAlong),
+    positiveStartDistanceMm: positiveStep.startDistance + from,
+    positiveEndDistanceMm: positiveStep.startDistance + to,
+    negativeStartDistanceMm: negativeDistanceAt({ pair, position: from }),
+    negativeEndDistanceMm: negativeDistanceAt({ pair, position: to }),
+    midpointCenterlineSpacingMm: Math.abs(
+      negativeStartNormalOffsetMm +
+        offsetSlope * ((from + to) / 2 - negativeStartAlongPositiveStepMm),
     ),
   }
 }
@@ -291,13 +296,14 @@ function negativeDistanceAt({
   pair,
   position,
 }: {
-  pair: ParallelPair
+  pair: ParallelTraceStepPair
   /** Position along the positive step, in mm from its start. */
   position: number
 }): number {
   const fraction =
-    (position - pair.negativeStartAlong) /
-    (pair.negativeEndAlong - pair.negativeStartAlong)
+    (position - pair.negativeStartAlongPositiveStepMm) /
+    (pair.negativeEndAlongPositiveStepMm -
+      pair.negativeStartAlongPositiveStepMm)
   return pair.negativeStep.startDistance + pair.negativeStep.length * fraction
 }
 

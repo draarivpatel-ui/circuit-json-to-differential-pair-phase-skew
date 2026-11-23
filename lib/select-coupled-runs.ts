@@ -10,19 +10,19 @@ const CHAIN_TOLERANCE = MIN_OVERLAP / 2
 
 /**
  * A stretch where the two traces of a pair run side by side. Distances are
- * measured along each walk from its first point, in mm.
+ * routed distances along each walk from its first point, in mm.
  */
 export type CoupledRun = {
-  positiveStart: number
-  positiveEnd: number
-  negativeStart: number
-  negativeEnd: number
+  positiveStartDistanceMm: number
+  positiveEndDistanceMm: number
+  negativeStartDistanceMm: number
+  negativeEndDistanceMm: number
 }
 
 /** A coupled run before selection, with how far apart its traces are. */
 export type CandidateRun = CoupledRun & {
-  /** Distance between the traces at the middle of the run, in mm. */
-  offset: number
+  /** Unsigned centreline spacing between the traces at the middle of the run, in mm. */
+  midpointCenterlineSpacingMm: number
 }
 
 /** A stretch of distance along one trace, in mm. */
@@ -38,13 +38,17 @@ type Interval = { start: number; end: number }
  */
 export function selectCoupledRuns(candidates: CandidateRun[]): CoupledRun[] {
   const options = candidates.concat(trimNearestFirst(candidates))
-  return bestOrderedChain(options).map(({ offset: _offset, ...run }) => run)
+  return bestOrderedChain(options).map(
+    ({ midpointCenterlineSpacingMm: _spacing, ...run }) => run,
+  )
 }
 
 /** Trims candidates, nearest first, so no stretch of either trace is used twice. */
 function trimNearestFirst(candidates: CandidateRun[]): CandidateRun[] {
   const order = [...candidates].sort(
-    (a, b) => a.offset - b.offset || a.positiveStart - b.positiveStart,
+    (a, b) =>
+      a.midpointCenterlineSpacingMm - b.midpointCenterlineSpacingMm ||
+      a.positiveStartDistanceMm - b.positiveStartDistanceMm,
   )
   const usedPositive: Interval[] = []
   const usedNegative: Interval[] = []
@@ -53,12 +57,12 @@ function trimNearestFirst(candidates: CandidateRun[]): CandidateRun[] {
     for (const free of freeParts({ run, usedPositive, usedNegative })) {
       pieces.push(free)
       const positiveInterval = {
-        start: free.positiveStart,
-        end: free.positiveEnd,
+        start: free.positiveStartDistanceMm,
+        end: free.positiveEndDistanceMm,
       }
       const negativeInterval = {
-        start: free.negativeStart,
-        end: free.negativeEnd,
+        start: free.negativeStartDistanceMm,
+        end: free.negativeEndDistanceMm,
       }
       usedPositive.splice(
         insertionIndex({ intervals: usedPositive, interval: positiveInterval }),
@@ -87,37 +91,43 @@ function freeParts({
 }): CandidateRun[] {
   // Work in positive-trace distance; the negative side maps onto it linearly.
   const negativePerPositive =
-    (run.negativeEnd - run.negativeStart) /
-    (run.positiveEnd - run.positiveStart)
+    (run.negativeEndDistanceMm - run.negativeStartDistanceMm) /
+    (run.positiveEndDistanceMm - run.positiveStartDistanceMm)
   const blocked = overlapping({
     intervals: usedPositive,
-    interval: { start: run.positiveStart, end: run.positiveEnd },
+    interval: {
+      start: run.positiveStartDistanceMm,
+      end: run.positiveEndDistanceMm,
+    },
   })
   for (const used of overlapping({
     intervals: usedNegative,
-    interval: { start: run.negativeStart, end: run.negativeEnd },
+    interval: {
+      start: run.negativeStartDistanceMm,
+      end: run.negativeEndDistanceMm,
+    },
   })) {
     blocked.push({
       start:
-        run.positiveStart +
-        (used.start - run.negativeStart) / negativePerPositive,
+        run.positiveStartDistanceMm +
+        (used.start - run.negativeStartDistanceMm) / negativePerPositive,
       end:
-        run.positiveStart +
-        (used.end - run.negativeStart) / negativePerPositive,
+        run.positiveStartDistanceMm +
+        (used.end - run.negativeStartDistanceMm) / negativePerPositive,
     })
   }
   blocked.sort((a, b) => a.start - b.start)
 
   const parts: CandidateRun[] = []
-  let cursor = run.positiveStart
+  let cursor = run.positiveStartDistanceMm
   for (const cut of blocked) {
     if (cut.start - cursor > MIN_OVERLAP) {
       parts.push(sliceRun({ run, from: cursor, to: cut.start }))
     }
     cursor = Math.max(cursor, cut.end)
   }
-  if (run.positiveEnd - cursor > MIN_OVERLAP) {
-    parts.push(sliceRun({ run, from: cursor, to: run.positiveEnd }))
+  if (run.positiveEndDistanceMm - cursor > MIN_OVERLAP) {
+    parts.push(sliceRun({ run, from: cursor, to: run.positiveEndDistanceMm }))
   }
   return parts
 }
@@ -135,30 +145,32 @@ function bestOrderedChain(runs: CandidateRun[]): CandidateRun[] {
   const scores: ChainScores = { total, weightedOffset }
   const byNegativeEnd = indicesSortedBy({
     runs,
-    key: (run) => run.negativeEnd,
+    key: (run) => run.negativeEndDistanceMm,
   })
-  const negativeEnds = byNegativeEnd.map((index) => runs[index].negativeEnd)
+  const negativeEnds = byNegativeEnd.map(
+    (index) => runs[index].negativeEndDistanceMm,
+  )
   const rank: number[] = new Array(runs.length)
   for (let position = 0; position < byNegativeEnd.length; position++) {
     rank[byNegativeEnd[position]] = position + 1
   }
   const byPositiveEnd = indicesSortedBy({
     runs,
-    key: (run) => run.positiveEnd,
+    key: (run) => run.positiveEndDistanceMm,
   })
   const tree = new Array<number>(runs.length + 1).fill(-1)
 
   let ended = 0
   for (const index of indicesSortedBy({
     runs,
-    key: (run) => run.positiveStart,
+    key: (run) => run.positiveStartDistanceMm,
   })) {
     const run = runs[index]
     // Chains that end before this run on the positive trace become available.
     while (
       ended < byPositiveEnd.length &&
-      runs[byPositiveEnd[ended]].positiveEnd <
-        run.positiveStart + CHAIN_TOLERANCE
+      runs[byPositiveEnd[ended]].positiveEndDistanceMm <
+        run.positiveStartDistanceMm + CHAIN_TOLERANCE
     ) {
       const done = byPositiveEnd[ended++]
       for (let at = rank[done]; at < tree.length; at += at & -at) {
@@ -170,9 +182,9 @@ function bestOrderedChain(runs: CandidateRun[]): CandidateRun[] {
     // The best of them that also ends before this run on the negative trace.
     let before = -1
     for (
-      let at = countLessThan({
-        sorted: negativeEnds,
-        value: run.negativeStart + CHAIN_TOLERANCE,
+      let at = countEndsBefore({
+        sortedEndDistancesMm: negativeEnds,
+        thresholdDistanceMm: run.negativeStartDistanceMm + CHAIN_TOLERANCE,
       });
       at > 0;
       at -= at & -at
@@ -181,9 +193,9 @@ function bestOrderedChain(runs: CandidateRun[]): CandidateRun[] {
         before = tree[at]
       }
     }
-    const length = run.positiveEnd - run.positiveStart
+    const length = run.positiveEndDistanceMm - run.positiveStartDistanceMm
     total[index] = length
-    weightedOffset[index] = run.offset * length
+    weightedOffset[index] = run.midpointCenterlineSpacingMm * length
     if (before >= 0) {
       total[index] += total[before]
       weightedOffset[index] += weightedOffset[before]
@@ -240,19 +252,19 @@ function indicesSortedBy({
     .sort((a, b) => key(runs[a]) - key(runs[b]))
 }
 
-/** How many values in an ascending list are strictly below `value` (binary search). */
-function countLessThan({
-  sorted,
-  value,
+/** How many end distances in an ascending list are strictly below `thresholdDistanceMm` (binary search). */
+function countEndsBefore({
+  sortedEndDistancesMm,
+  thresholdDistanceMm,
 }: {
-  sorted: number[]
-  value: number
+  sortedEndDistancesMm: number[]
+  thresholdDistanceMm: number
 }): number {
   let low = 0
-  let high = sorted.length
+  let high = sortedEndDistancesMm.length
   while (low < high) {
     const middle = (low + high) >> 1
-    if (sorted[middle] < value) {
+    if (sortedEndDistancesMm[middle] < thresholdDistanceMm) {
       low = middle + 1
       continue
     }
@@ -318,7 +330,7 @@ function firstEndingAfter({
   return low
 }
 
-/** The part of a run between two positive-trace distances, with skews interpolated. */
+/** The part of a run between two positive-trace distances, with negative-trace distances interpolated. */
 function sliceRun({
   run,
   from,
@@ -328,17 +340,19 @@ function sliceRun({
   from: number
   to: number
 }): CandidateRun {
-  const span = run.positiveEnd - run.positiveStart
-  const negativeSpan = run.negativeEnd - run.negativeStart
-  const negativeStart =
-    run.negativeStart + (negativeSpan * (from - run.positiveStart)) / span
-  const negativeEnd =
-    run.negativeStart + (negativeSpan * (to - run.positiveStart)) / span
+  const span = run.positiveEndDistanceMm - run.positiveStartDistanceMm
+  const negativeSpan = run.negativeEndDistanceMm - run.negativeStartDistanceMm
+  const negativeStartDistanceMm =
+    run.negativeStartDistanceMm +
+    (negativeSpan * (from - run.positiveStartDistanceMm)) / span
+  const negativeEndDistanceMm =
+    run.negativeStartDistanceMm +
+    (negativeSpan * (to - run.positiveStartDistanceMm)) / span
   return {
-    positiveStart: from,
-    positiveEnd: to,
-    negativeStart,
-    negativeEnd,
-    offset: run.offset,
+    positiveStartDistanceMm: from,
+    positiveEndDistanceMm: to,
+    negativeStartDistanceMm,
+    negativeEndDistanceMm,
+    midpointCenterlineSpacingMm: run.midpointCenterlineSpacingMm,
   }
 }

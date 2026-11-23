@@ -157,17 +157,17 @@ type RunEnds = { from: number; to: number; otherFrom: number; otherTo: number }
 function runEnds({ run, side }: { run: CoupledRun; side: PairSide }): RunEnds {
   if (side === "positive") {
     return {
-      from: run.positiveStart,
-      to: run.positiveEnd,
-      otherFrom: run.negativeStart,
-      otherTo: run.negativeEnd,
+      from: run.positiveStartDistanceMm,
+      to: run.positiveEndDistanceMm,
+      otherFrom: run.negativeStartDistanceMm,
+      otherTo: run.negativeEndDistanceMm,
     }
   }
   return {
-    from: run.negativeStart,
-    to: run.negativeEnd,
-    otherFrom: run.positiveStart,
-    otherTo: run.positiveEnd,
+    from: run.negativeStartDistanceMm,
+    to: run.negativeEndDistanceMm,
+    otherFrom: run.positiveStartDistanceMm,
+    otherTo: run.positiveEndDistanceMm,
   }
 }
 
