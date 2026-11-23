@@ -25,3 +25,8 @@ import { DEFAULT_PHASE_SKEW_COLORS } from "circuit-json-to-differential-pair-pha
 
 DEFAULT_PHASE_SKEW_COLORS.positive // "rgb(0, 0, 255)"
 ```
+
+The package ships its TypeScript source (`lib/index.ts`) without a build
+step, and `circuit-json` is a peer dependency. Import it from Bun or a
+bundler, and type-check it with `"moduleResolution": "bundler"` and an
+ES2017 or later `lib`, as in the repo's `tsconfig.json`.

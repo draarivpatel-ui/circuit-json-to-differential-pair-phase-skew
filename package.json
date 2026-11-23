@@ -18,9 +18,10 @@
   "devDependencies": {
     "@biomejs/biome": "2.0.0",
     "@types/bun": "^1.3.4",
-    "circuit-json": "0.0.561"
+    "circuit-json": "0.0.561",
+    "typescript": "^5.9.3"
   },
   "peerDependencies": {
-    "typescript": "^5.9.3"
+    "circuit-json": ">=0.0.561"
   }
 }
