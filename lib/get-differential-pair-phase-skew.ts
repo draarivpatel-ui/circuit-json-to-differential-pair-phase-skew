@@ -11,7 +11,7 @@ import type {
   SourceBus,
 } from "circuit-json"
 import { pcb_board } from "circuit-json"
-import { clipRouteToTerminalPads } from "./clip-route-to-terminal-pads"
+import { clipRouteInsidePads } from "./clip-route-inside-pads"
 import { cutRouteTapers } from "./cut-route-tapers"
 import type {
   DifferentialPairPhaseSkew,
@@ -49,8 +49,8 @@ type PairWalks = { positive: TraceWalk; negative: TraceWalk }
  *
  * Distances are copper length: planar length plus each layer change's
  * Z-distance through the board's stackup, with routing inside the start
- * and end pads measured straight from the pad centre to the pad edge, as
- * KiCad does. A pair is skipped, without affecting the others, when either
+ * and end pads and inside vias' pads measured straight from the pad centre
+ * to the pad edge, as KiCad does. A pair is skipped, without affecting the others, when either
  * trace has no planar copper, has copper that isn't continuous or has no
  * finite length, or its board's dimensions fail the `pcb_board` schema.
  *
@@ -184,16 +184,18 @@ function walkPair({
   const layerChangeBoard = getLayerChangeBoard({ db, board })
   if (layerChangeBoard === null) return null
   const positiveWalk = walkTrace({
-    route: clipRouteToTerminalPads({
+    route: clipRouteInsidePads({
       route: cutRouteTapers({ route: positiveTrace.route }),
       db,
+      pcbTraceId: positiveTrace.pcb_trace_id,
     }),
     ...layerChangeBoard,
   })
   const negativeWalk = walkTrace({
-    route: clipRouteToTerminalPads({
+    route: clipRouteInsidePads({
       route: cutRouteTapers({ route: negativeTrace.route }),
       db,
+      pcbTraceId: negativeTrace.pcb_trace_id,
     }),
     ...layerChangeBoard,
   })

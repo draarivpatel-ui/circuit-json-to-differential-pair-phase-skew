@@ -280,8 +280,8 @@ function pointAlong({
   }
 }
 
-/** A round outline as a rounded rectangle with a full corner radius. */
-function getCircleOutline({
+/** A round outline, such as a via's pad, as a rounded rectangle with a full corner radius. */
+export function getCircleOutline({
   center,
   diameterMm,
 }: {
