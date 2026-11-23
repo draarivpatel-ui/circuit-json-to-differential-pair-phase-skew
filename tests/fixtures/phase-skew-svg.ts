@@ -22,7 +22,9 @@ const PIXELS_PER_MM = 40
  */
 export function phaseSkewSvg(circuitJson: AnyCircuitElement[]): string {
   const db = cju(circuitJson)
-  const pairs = getDifferentialPairPhaseSkew({ circuitJson })
+  const differentialPairPhaseSkews = getDifferentialPairPhaseSkew({
+    circuitJson,
+  })
   const traces = db.pcb_trace.list()
   const points = traces.flatMap((trace) =>
     trace.route.flatMap((routePoint) => routePointPositions(routePoint)),
@@ -54,14 +56,14 @@ export function phaseSkewSvg(circuitJson: AnyCircuitElement[]): string {
       (via) =>
         `<circle cx="${via.x}" cy="${via.y}" r="${via.outer_diameter / 2}" fill="none" stroke="#ead9bd" stroke-width="0.07"/>`,
     )
-  const phaseSkewTraces = pairs.flatMap((pair) => [
+  const phaseSkewTraces = differentialPairPhaseSkews.flatMap((pair) => [
     pair.positive_trace,
     pair.negative_trace,
   ])
   const overlay = phaseSkewTraces.flatMap((trace) =>
     trace.segments.flatMap((segment) => phaseSkewLines({ trace, segment })),
   )
-  const maxima = pairs
+  const formattedPeakPhaseSkewsMm = differentialPairPhaseSkews
     .map((pair) => pair.max_abs_phase_skew?.toFixed(5) ?? "unknown")
     .join(", ")
   return `<svg xmlns="http://www.w3.org/2000/svg" width="${Math.ceil(width * PIXELS_PER_MM)}" height="${Math.ceil(height * PIXELS_PER_MM)}" viewBox="${minX} ${-maxY} ${width} ${height}">
@@ -69,7 +71,7 @@ export function phaseSkewSvg(circuitJson: AnyCircuitElement[]): string {
   <g transform="scale(1 -1)">
     ${[...copper, ...overlay, ...vias].join("\n    ")}
   </g>
-  <text x="${minX + 0.3}" y="${-maxY + 0.48}" font-family="sans-serif" font-size="0.32" fill="#fff">Max phase skew (mm): ${maxima || "no measurable pairs"}. Blue: ahead. Red: behind. White: in step. Grey: unknown.</text>
+  <text x="${minX + 0.3}" y="${-maxY + 0.48}" font-family="sans-serif" font-size="0.32" fill="#fff">Peak phase skew magnitude (mm): ${formattedPeakPhaseSkewsMm || "no measurable pairs"}. Blue: ahead. Red: behind. White: in step. Grey: unknown.</text>
 </svg>`
 }
 
@@ -83,7 +85,8 @@ function routePointPositions(routePoint: PcbTraceRoutePoint): Point[] {
 
 /**
  * One segment as SVG lines: grey when unknown; otherwise the zero colour
- * with the sign's colour over it at the segment's share of the trace's scale.
+ * with the sign's colour over it at the segment's share of the trace's
+ * phase skew extreme for that sign.
  */
 function phaseSkewLines({
   trace,
@@ -98,13 +101,15 @@ function phaseSkewLines({
     return [`<line ${line} stroke="${DEFAULT_PHASE_SKEW_COLORS.unknown}"/>`]
   }
   let color = DEFAULT_PHASE_SKEW_COLORS.positive
-  let scale = trace.max_phase_skew
+  let phaseSkewExtremeMm = trace.max_phase_skew
   if (phase_skew < 0) {
     color = DEFAULT_PHASE_SKEW_COLORS.negative
-    scale = trace.min_phase_skew
+    phaseSkewExtremeMm = trace.min_phase_skew
   }
   let opacity = 0
-  if (scale !== 0) opacity = Math.min(1, phase_skew / scale)
+  if (phaseSkewExtremeMm !== 0) {
+    opacity = Math.min(1, phase_skew / phaseSkewExtremeMm)
+  }
   return [
     `<line ${line} stroke="${DEFAULT_PHASE_SKEW_COLORS.zero}"/>`,
     `<line ${line} stroke="${color}" stroke-opacity="${opacity}"/>`,

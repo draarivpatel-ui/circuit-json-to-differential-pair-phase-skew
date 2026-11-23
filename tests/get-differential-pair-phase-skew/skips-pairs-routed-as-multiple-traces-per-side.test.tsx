@@ -5,7 +5,7 @@ import { getDifferentialPairPhaseSkew } from "lib/index"
 import { phaseSkewSvg } from "tests/fixtures/phase-skew-svg"
 import { renderCircuit } from "tests/fixtures/render-circuit"
 
-test("a pair routed as two PCB traces per side has no phase skew", async () => {
+test("skips a pair routed as two PCB traces per side", async () => {
   const circuitJson = await renderCircuit(
     <board
       width="30mm"

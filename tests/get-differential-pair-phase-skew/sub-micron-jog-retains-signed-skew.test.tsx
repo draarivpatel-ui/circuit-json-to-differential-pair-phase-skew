@@ -7,7 +7,7 @@ import { segmentAtX } from "tests/fixtures/segment-at-x"
 /** Extra copper added by the 0.5 µm triangular jog (~0.00041 mm, below 0.0005 mm). */
 const JOG_EXTRA_LENGTH = 2 * Math.hypot(0.0005, 0.0005) - 0.001
 
-test("a sub-micron jog retains its signed skew in Circuit JSON", async () => {
+test("a sub-micron jog retains signed phase skew in the calculation output", async () => {
   // DP takes a 0.5 µm jog at x = -2, adding ~0.00041 mm of copper. The 14 mm
   // coupled run after the jog retains that skew to within 10 nm.
   const circuitJson = await renderPairBoard({

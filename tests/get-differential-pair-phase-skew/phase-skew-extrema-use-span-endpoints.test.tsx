@@ -6,7 +6,7 @@ import { renderPairBoard } from "tests/fixtures/pair-board"
 /** DN's slanted 20 mm run is ~0.00196 mm longer than DP's straight run. */
 const SLANT_EXTRA_LENGTH = Math.hypot(20, 0.28) - 20
 
-test("each trace skew scale comes from known span endpoints, not piece midpoints", async () => {
+test("each trace's phase skew extrema come from known span endpoints, not piece midpoints", async () => {
   // DN slants 0.28 mm over 20 mm (still parallel at cos ~0.999902) inside a
   // 0.8 mm gap, so the whole run is coupled and its phase skew ramps from 0
   // to ~0.00196 mm at its end.

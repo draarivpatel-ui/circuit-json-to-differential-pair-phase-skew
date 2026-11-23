@@ -4,7 +4,7 @@ import { getDifferentialPairPhaseSkew } from "lib/index"
 import { renderPairBoard } from "tests/fixtures/pair-board"
 import { segmentAtX } from "tests/fixtures/segment-at-x"
 
-test("a stretch where the traces split apart is marked interpolated, not measured", async () => {
+test("phase skew ramps between matched runs where the traces split apart", async () => {
   // DN drops 6 mm away between x = -6 and x = 6.
   const circuitJson = await renderPairBoard({
     positivePath: [],
@@ -34,9 +34,11 @@ test("a stretch where the traces split apart is marked interpolated, not measure
     (segment) => segment.start.x >= -6 && segment.end.x <= 6,
   )
   expect(ramp).toHaveLength(240)
-  ramp.slice(1).forEach((segment, index) => {
-    expect(segment.phase_skew ?? 0).toBeLessThan(ramp[index].phase_skew ?? 0)
-  })
+  for (let index = 1; index < ramp.length; index++) {
+    expect(ramp[index].phase_skew ?? 0).toBeLessThan(
+      ramp[index - 1].phase_skew ?? 0,
+    )
+  }
   // Only the measured stretches count toward the maximum: 12 mm of detour.
   expect(pair.max_abs_phase_skew).toBeCloseTo(12, 5)
 

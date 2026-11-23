@@ -5,7 +5,7 @@ import { getDifferentialPairPhaseSkew } from "lib/index"
 import { phaseSkewSvg } from "tests/fixtures/phase-skew-svg"
 import { renderCircuit } from "tests/fixtures/render-circuit"
 
-test("a claimed via adds its layer distance to phase skew", async () => {
+test("a claimed via, routed as a through pad, adds its layer change length to phase skew", async () => {
   const circuitJson = await renderCircuit(
     <board
       width="22mm"
@@ -128,7 +128,7 @@ test("a claimed via adds its layer distance to phase skew", async () => {
   const [dp] = db.pcb_trace.list()
   expect(dp.route.map((point) => point.route_type)).toContain("through_pad")
   // DP is ahead by the board thickness once both traces are on bottom, the
-  // same as when the route uses a via (claimed-via-counts-layer-distance2).
+  // same as when the route uses a via (routed-via-adds-layer-change-length).
   const [pair] = getDifferentialPairPhaseSkew({ circuitJson })
   expect(pair).toMatchObject({
     max_abs_phase_skew: db.pcb_board.list()[0].thickness,

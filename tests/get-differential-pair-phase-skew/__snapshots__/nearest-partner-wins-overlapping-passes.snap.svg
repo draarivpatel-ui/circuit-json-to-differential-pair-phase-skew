@@ -525,7 +525,7 @@
     <line x1="1.9499999999999993" y1="-0.8999999999999999" x2="2" y2="-0.8999999999999999" stroke-width="0.165" stroke="rgb(0, 0, 255)" stroke-opacity="0.998015873015873"/>
     <line x1="2" y1="-0.8999999999999999" x2="12" y2="-0.8999999999999999" stroke-width="0.165" stroke="rgb(255, 255, 255)"/>
     <line x1="2" y1="-0.8999999999999999" x2="12" y2="-0.8999999999999999" stroke-width="0.165" stroke="rgb(0, 0, 255)" stroke-opacity="1"/>
-    <line x1="12" y1="-0.8999999999999999" x2="12" y2="-0.2999999999999985" stroke-width="0.165" stroke="rgb(128, 128, 128)"/>
+    <line x1="12" y1="-0.8999999999999999" x2="12" y2="-0.3000000000000056" stroke-width="0.165" stroke="rgb(128, 128, 128)"/>
   </g>
-  <text x="-12.7" y="-0.8200000000000001" font-family="sans-serif" font-size="0.32" fill="#fff">Max phase skew (mm): 12.60000. Blue: ahead. Red: behind. White: in step. Grey: unknown.</text>
+  <text x="-12.7" y="-0.8200000000000001" font-family="sans-serif" font-size="0.32" fill="#fff">Peak phase skew magnitude (mm): 12.60000. Blue: ahead. Red: behind. White: in step. Grey: unknown.</text>
 </svg>

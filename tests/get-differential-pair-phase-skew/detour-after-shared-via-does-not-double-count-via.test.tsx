@@ -4,7 +4,7 @@ import { phaseSkewSvg } from "tests/fixtures/phase-skew-svg"
 import { renderPairBoard } from "tests/fixtures/pair-board"
 import { segmentAtX } from "tests/fixtures/segment-at-x"
 
-test("a detour right after a shared via does not double-count the partner's single via", async () => {
+test("a detour right after aligned vias does not double-count the partner's single via", async () => {
   // Both traces run together on top to x = 0 and drop through symmetric 1.6 mm
   // vias to bottom. DN immediately continues coupled along [0, 6] on bottom
   // (no copper gap between its two coupled runs, only the single via at x = 0).
