@@ -19,11 +19,11 @@ test("coupling stops partway along a step where the partner drifts out of spacin
   })
   const [pair] = getDifferentialPairPhaseSkew({ circuitJson })
 
-  // Measured up to x = 4.3 (by x = 0 DN's slant has added 3.58 µm), and
-  // unknown after it.
+  // Measured up to x = 4.3 (by x = 0 DN's 0.1 mm entry jog has added
+  // 2.50 µm and its slant 0.98 µm), and unknown after it.
   expect(
     segmentAtX({ segments: pair.positive_trace.segments, x: 0 }).phase_skew,
-  ).toBeCloseTo(-0.00358, 5)
+  ).toBeCloseTo(-0.00348, 5)
   expect(
     segmentAtX({ segments: pair.positive_trace.segments, x: 5 }).phase_skew,
   ).toBeUndefined()

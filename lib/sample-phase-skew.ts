@@ -5,17 +5,16 @@ import { roundPhaseSkew } from "./round-phase-skew"
 import { MIN_OVERLAP } from "./select-coupled-runs"
 import type { TraceStep } from "./walk-trace"
 
-/** Target spacing of phase skew samples along a ramp, in mm; a ramp with little change in phase skew may be cut more coarsely. */
+/** Target spacing of phase skew samples along a ramp, in mm. */
 const RAMP_SAMPLE_SPACING_TARGET_MM = 0.05
-
-/** Ramps are not cut finer than this change in phase skew, in mm (1 µm, the readout precision). */
-const RAMP_PHASE_SKEW_INCREMENT_MM = 0.001
 
 /**
  * Cuts the steps at span boundaries. Constant pieces stay whole; pieces
- * where phase skew changes are cut every {@link RAMP_SAMPLE_SPACING_TARGET_MM} mm, or every
- * {@link RAMP_PHASE_SKEW_INCREMENT_MM} mm of phase skew if that is coarser, each with the
- * phase skew at its middle.
+ * where phase skew changes are cut every
+ * {@link RAMP_SAMPLE_SPACING_TARGET_MM} mm, each with the rounded phase skew
+ * at its middle, and neighbouring pieces whose rounded phase skew is equal
+ * are joined. A ramp so keeps its gradient down to the 10 nm rounding
+ * without a piece for every sample.
  */
 export function samplePhaseSkew({
   steps,
@@ -64,25 +63,31 @@ function sampleSpan({
   to: number
 }): PhaseSkewSegment[] {
   const segments: PhaseSkewSegment[] = []
-  const pieceCount = rampPieceCount({ span, from, to })
-  for (let piece = 0; piece < pieceCount; piece++) {
-    const pieceFrom = from + ((to - from) * piece) / pieceCount
-    const pieceTo = from + ((to - from) * (piece + 1)) / pieceCount
+  const sampleCount = getRampSampleCount({ span, from, to })
+  for (let sample = 0; sample < sampleCount; sample++) {
+    const pieceFrom = from + ((to - from) * sample) / sampleCount
+    const pieceTo = from + ((to - from) * (sample + 1)) / sampleCount
+    const phaseSkew = phaseSkewAt({ span, distance: (pieceFrom + pieceTo) / 2 })
+    const end = pointAt({ step, distance: pieceTo })
+    const previous = segments[segments.length - 1]
+    if (previous !== undefined && previous.phase_skew === phaseSkew) {
+      segments[segments.length - 1] = { ...previous, end }
+      continue
+    }
     const segment: PhaseSkewSegment = {
       start: pointAt({ step, distance: pieceFrom }),
-      end: pointAt({ step, distance: pieceTo }),
+      end,
       layer: step.layer,
       width: step.width,
     }
-    const phaseSkew = phaseSkewAt({ span, distance: (pieceFrom + pieceTo) / 2 })
     if (phaseSkew !== null) segment.phase_skew = phaseSkew
     segments.push(segment)
   }
   return segments
 }
 
-/** How many pieces to cut a ramp between `from` and `to` into; 1 when phase skew barely changes. */
-function rampPieceCount({
+/** How many samples to cut a ramp between `from` and `to` into; 1 where phase skew is unknown or constant. */
+function getRampSampleCount({
   span,
   from,
   to,
@@ -94,13 +99,8 @@ function rampPieceCount({
   const startPhaseSkewMm = phaseSkewAt({ span, distance: from })
   const endPhaseSkewMm = phaseSkewAt({ span, distance: to })
   if (startPhaseSkewMm === null || endPhaseSkewMm === null) return 1
-  const sampleCountByLength = Math.ceil(
-    (to - from) / RAMP_SAMPLE_SPACING_TARGET_MM,
-  )
-  const sampleCountByPhaseSkew = Math.ceil(
-    Math.abs(endPhaseSkewMm - startPhaseSkewMm) / RAMP_PHASE_SKEW_INCREMENT_MM,
-  )
-  return Math.max(1, Math.min(sampleCountByLength, sampleCountByPhaseSkew))
+  if (startPhaseSkewMm === endPhaseSkewMm) return 1
+  return Math.ceil((to - from) / RAMP_SAMPLE_SPACING_TARGET_MM)
 }
 
 /** The phase skew at a distance inside a span, rounded; null where it is unknown. */

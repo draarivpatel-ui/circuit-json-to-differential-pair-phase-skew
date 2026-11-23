@@ -8,8 +8,8 @@ const SLANT_EXTRA_LENGTH = Math.hypot(20, 0.28) - 20
 
 test("each trace skew scale comes from known span endpoints, not piece midpoints", async () => {
   // DN slants 0.28 mm over 20 mm (still parallel at cos ~0.999902) inside a
-  // 0.8 mm gap, so the whole run is coupled and split into 2 pieces with
-  // midpoints ~0.00049 and ~0.00147 mm while the endpoint peaks at ~0.00196 mm.
+  // 0.8 mm gap, so the whole run is coupled and its phase skew ramps from 0
+  // to ~0.00196 mm at its end.
   const circuitJson = await renderPairBoard({
     positivePath: [{ x: 2, y: 0 }],
     negativePath: [
@@ -24,16 +24,18 @@ test("each trace skew scale comes from known span endpoints, not piece midpoints
     (segment) =>
       segment.phase_skew !== undefined && segment.start.y !== segment.end.y,
   )
-  expect(slanted).toHaveLength(2)
+  // Every piece's midpoint is short of the run's end.
+  for (const segment of slanted) {
+    expect(segment.phase_skew ?? 0).toBeLessThanOrEqual(
+      pair.negative_trace.max_phase_skew,
+    )
+  }
 
-  // Scale comes from the 0.00196 mm span endpoint, not the 0.00147 mm midpoint.
+  // Scale comes from the 0.00196 mm span endpoint.
   expect(pair.negative_trace.max_phase_skew).toBeCloseTo(SLANT_EXTRA_LENGTH, 5)
   expect(pair.negative_trace.min_phase_skew).toBe(0)
   expect(pair.positive_trace.max_phase_skew).toBe(0)
   expect(pair.positive_trace.min_phase_skew).toBeCloseTo(-SLANT_EXTRA_LENGTH, 5)
-
-  const secondPiece = slanted[1]
-  expect(secondPiece.phase_skew).toBeCloseTo(0.00147, 5)
 
   await expect(phaseSkewSvg(circuitJson)).toMatchSvgSnapshot(import.meta.path)
 })
