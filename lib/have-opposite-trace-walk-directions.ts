@@ -2,12 +2,12 @@ import type { Point } from "circuit-json"
 import type { TraceStep } from "./walk-trace"
 
 /**
- * True when the negative route is stored from the other end than the
- * positive one: its ends lie closer to the positive route's ends that way.
- * Route ends are the pair's pads, so this holds even when one part owns
- * pads at both ends of the pair.
+ * True when the two walks run in opposite directions: each walk's ends lie
+ * closer to the other walk's ends when one of them is reversed. Route ends
+ * are the pair's pads, so this holds even when one part owns pads at both
+ * ends of the pair.
  */
-export function isNegativeRouteReversed({
+export function haveOppositeTraceWalkDirections({
   positiveSteps,
   negativeSteps,
 }: {
@@ -18,13 +18,13 @@ export function isNegativeRouteReversed({
   const positiveEnd = positiveSteps[positiveSteps.length - 1].end
   const negativeStart = negativeSteps[0].start
   const negativeEnd = negativeSteps[negativeSteps.length - 1].end
-  const sameDirection =
+  const sameDirectionEndpointDistanceMm =
     distance({ a: positiveStart, b: negativeStart }) +
     distance({ a: positiveEnd, b: negativeEnd })
-  const oppositeDirection =
+  const oppositeDirectionEndpointDistanceMm =
     distance({ a: positiveStart, b: negativeEnd }) +
     distance({ a: positiveEnd, b: negativeStart })
-  return oppositeDirection < sameDirection
+  return oppositeDirectionEndpointDistanceMm < sameDirectionEndpointDistanceMm
 }
 
 /** Straight-line distance between two points, in mm. */

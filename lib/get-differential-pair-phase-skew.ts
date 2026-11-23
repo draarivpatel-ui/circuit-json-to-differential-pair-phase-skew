@@ -17,7 +17,7 @@ import type {
 } from "./differential-pair-phase-skew"
 import { findCoupledRuns } from "./find-coupled-runs"
 import { type PhaseSkewTrack, getPhaseSkewTrack } from "./get-phase-skew-track"
-import { isNegativeRouteReversed } from "./is-negative-route-reversed"
+import { haveOppositeTraceWalkDirections } from "./have-opposite-trace-walk-directions"
 import { roundPhaseSkew } from "./round-phase-skew"
 import { samplePhaseSkew } from "./sample-phase-skew"
 import { type TraceWalk, reverseWalk, walkTrace } from "./walk-trace"
@@ -56,22 +56,20 @@ export function getDifferentialPairPhaseSkew({
   for (const bus of db.source_bus.list()) {
     const differentialPair = bus.differential_pair
     if (differentialPair === undefined) continue
-    const {
-      positive_source_trace_id: positiveSourceTraceId,
-      negative_source_trace_id: negativeSourceTraceId,
-    } = differentialPair
-    if (positiveSourceTraceId === negativeSourceTraceId) continue
+    const { positive_source_trace_id, negative_source_trace_id } =
+      differentialPair
+    if (positive_source_trace_id === negative_source_trace_id) continue
     const positiveTraces = db.pcb_trace.list({
-      source_trace_id: positiveSourceTraceId,
+      source_trace_id: positive_source_trace_id,
     })
     const negativeTraces = db.pcb_trace.list({
-      source_trace_id: negativeSourceTraceId,
+      source_trace_id: negative_source_trace_id,
     })
     if (positiveTraces.length !== 1 || negativeTraces.length !== 1) continue
     pairs.push(
       getPairPhaseSkew({
         bus,
-        traceGap: differentialPair.trace_gap,
+        trace_gap: differentialPair.trace_gap,
         positiveTrace: positiveTraces[0],
         negativeTrace: negativeTraces[0],
         db,
@@ -85,7 +83,7 @@ export function getDifferentialPairPhaseSkew({
 /** Phase skew for one differential pair routed as one pcb_trace per side. */
 function getPairPhaseSkew({
   bus,
-  traceGap,
+  trace_gap,
   positiveTrace,
   negativeTrace,
   db,
@@ -93,7 +91,7 @@ function getPairPhaseSkew({
 }: {
   bus: SourceBus
   /** The pair's declared edge-to-edge gap in mm, if any. */
-  traceGap: number | undefined
+  trace_gap: number | undefined
   positiveTrace: PcbTrace
   negativeTrace: PcbTrace
   db: CircuitJsonUtilObjects
@@ -108,7 +106,7 @@ function getPairPhaseSkew({
   const runs = findCoupledRuns({
     positive: positive.steps,
     negative: negative.steps,
-    traceGap,
+    referenceGapMm: trace_gap,
   })
   const positiveTrack = getPhaseSkewTrack({
     runs,
@@ -184,7 +182,7 @@ function walkPair({
     return { positive, negative }
   }
   if (
-    !isNegativeRouteReversed({
+    !haveOppositeTraceWalkDirections({
       positiveSteps: positive.steps,
       negativeSteps: negative.steps,
     })

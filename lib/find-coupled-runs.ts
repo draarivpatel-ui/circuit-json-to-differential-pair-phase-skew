@@ -41,14 +41,14 @@ type ParallelPair = {
 export function findCoupledRuns({
   positive,
   negative,
-  traceGap,
+  referenceGapMm,
 }: {
   positive: TraceStep[]
   negative: TraceStep[]
-  /** Edge-to-edge copper gap, in mm. Without it, any spacing up to {@link UNSET_GAP_REACH_WIDTHS} widths counts. */
-  traceGap: number | undefined
+  /** The pair's declared edge-to-edge copper gap, in mm. Without it, any spacing up to {@link UNSET_GAP_REACH_WIDTHS} widths counts. */
+  referenceGapMm: number | undefined
 }): CoupledRun[] {
-  const mainRuns = findRunsAtGap({ positive, negative, traceGap })
+  const mainRuns = findRunsAtGap({ positive, negative, referenceGapMm })
   if (mainRuns.length === 0) return []
 
   const first = mainRuns[0]
@@ -68,7 +68,7 @@ export function findCoupledRuns({
     beforeRuns = findRunsAtGap({
       positive: positiveBefore,
       negative: negativeBefore,
-      traceGap: Math.hypot(
+      referenceGapMm: Math.hypot(
         positive[0].start.x - negative[0].start.x,
         positive[0].start.y - negative[0].start.y,
       ),
@@ -90,7 +90,7 @@ export function findCoupledRuns({
     afterRuns = findRunsAtGap({
       positive: positiveAfter,
       negative: negativeAfter,
-      traceGap: Math.hypot(
+      referenceGapMm: Math.hypot(
         positive[positive.length - 1].end.x -
           negative[negative.length - 1].end.x,
         positive[positive.length - 1].end.y -
@@ -145,22 +145,29 @@ function sliceSteps({
 function findRunsAtGap({
   positive,
   negative,
-  traceGap,
+  referenceGapMm,
 }: {
   positive: TraceStep[]
   negative: TraceStep[]
-  traceGap: number | undefined
+  /**
+   * The gap the spacing limit is built on, in mm: the declared edge-to-edge
+   * copper gap for the main pass, or the pad centre spacing for the pad
+   * fan-out passes. Undefined when the pair declares no gap.
+   */
+  referenceGapMm: number | undefined
 }): CoupledRun[] {
   const widest = widestStep({ steps: positive.concat(negative) })
   let reach = widest * UNSET_GAP_REACH_WIDTHS
-  if (traceGap !== undefined) reach = (traceGap + widest) * SPACING_ALLOWANCE
+  if (referenceGapMm !== undefined)
+    reach = (referenceGapMm + widest) * SPACING_ALLOWANCE
 
   const candidates: CandidateRun[] = []
   for (const pair of findParallelPairs({ positive, negative, reach })) {
     let maxOffset = reach
-    if (traceGap !== undefined) {
+    if (referenceGapMm !== undefined) {
       maxOffset =
-        (traceGap + (pair.positiveStep.width + pair.negativeStep.width) / 2) *
+        (referenceGapMm +
+          (pair.positiveStep.width + pair.negativeStep.width) / 2) *
         SPACING_ALLOWANCE
     }
     const candidate = clipToSpacing({ pair, maxOffset })
