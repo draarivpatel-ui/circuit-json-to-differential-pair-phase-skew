@@ -5,16 +5,16 @@ import { roundPhaseSkew } from "./round-phase-skew"
 import { MIN_OVERLAP } from "./select-coupled-runs"
 import type { TraceStep } from "./walk-trace"
 
-/** Target maximum sample length along a phase skew ramp, in mm. */
-const SAMPLE_LENGTH = 0.05
+/** Target spacing of phase skew samples along a ramp, in mm; a ramp with little change in phase skew may be cut more coarsely. */
+const RAMP_SAMPLE_SPACING_TARGET_MM = 0.05
 
 /** Ramps are not cut finer than this change in phase skew, in mm (1 µm, the readout precision). */
-const PHASE_SKEW_STEP = 0.001
+const RAMP_PHASE_SKEW_INCREMENT_MM = 0.001
 
 /**
  * Cuts the steps at span boundaries. Constant pieces stay whole; pieces
- * where phase skew changes are cut every {@link SAMPLE_LENGTH} mm, or every
- * {@link PHASE_SKEW_STEP} mm of phase skew if that is coarser, each with the
+ * where phase skew changes are cut every {@link RAMP_SAMPLE_SPACING_TARGET_MM} mm, or every
+ * {@link RAMP_PHASE_SKEW_INCREMENT_MM} mm of phase skew if that is coarser, each with the
  * phase skew at its middle.
  */
 export function samplePhaseSkew({
@@ -94,11 +94,13 @@ function rampPieceCount({
   const startPhaseSkewMm = phaseSkewAt({ span, distance: from })
   const endPhaseSkewMm = phaseSkewAt({ span, distance: to })
   if (startPhaseSkewMm === null || endPhaseSkewMm === null) return 1
-  const byLength = Math.ceil((to - from) / SAMPLE_LENGTH)
-  const bySkew = Math.ceil(
-    Math.abs(endPhaseSkewMm - startPhaseSkewMm) / PHASE_SKEW_STEP,
+  const sampleCountByLength = Math.ceil(
+    (to - from) / RAMP_SAMPLE_SPACING_TARGET_MM,
   )
-  return Math.max(1, Math.min(byLength, bySkew))
+  const sampleCountByPhaseSkew = Math.ceil(
+    Math.abs(endPhaseSkewMm - startPhaseSkewMm) / RAMP_PHASE_SKEW_INCREMENT_MM,
+  )
+  return Math.max(1, Math.min(sampleCountByLength, sampleCountByPhaseSkew))
 }
 
 /** The phase skew at a distance inside a span, rounded; null where it is unknown. */
@@ -110,11 +112,12 @@ function phaseSkewAt({
   distance: number
 }): number | null {
   if (span.startPhaseSkewMm === null) return null
-  const t =
+  const spanFraction =
     (distance - span.startWalkDistanceMm) /
     (span.endWalkDistanceMm - span.startWalkDistanceMm)
   return roundPhaseSkew(
-    span.startPhaseSkewMm + t * (span.endPhaseSkewMm - span.startPhaseSkewMm),
+    span.startPhaseSkewMm +
+      spanFraction * (span.endPhaseSkewMm - span.startPhaseSkewMm),
   )
 }
 
