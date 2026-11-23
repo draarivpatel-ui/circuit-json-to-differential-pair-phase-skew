@@ -11,6 +11,7 @@ import type {
   PcbTrace,
   SourceBus,
 } from "circuit-json"
+import { clipRouteToTerminalPads } from "./clip-route-to-terminal-pads"
 import type {
   DifferentialPairPhaseSkew,
   PhaseSkewTrace,
@@ -36,7 +37,10 @@ type PairWalks = { positive: TraceWalk; negative: TraceWalk }
  * a side routed as several doesn't record their order along the signal.
  *
  * Distances are copper length: planar length plus each layer change's
- * Z-distance through the board's stackup. Each trace with exactly one end
+ * Z-distance through the board's stackup, with routing inside the start
+ * and end pads measured straight from the pad centre to the pad edge, as
+ * KiCad does. A pair is skipped when either trace has no planar copper or
+ * copper that isn't continuous. Each trace with exactly one end
  * port marked `is_output` is walked from that end; if only one trace has
  * such a port, the other is oriented to match it by end distance; if neither
  * does, distances are measured from the positive trace's first route point
@@ -170,12 +174,12 @@ function walkPair({
     boardThickness = board.thickness
   }
   const positiveWalk = walkTrace({
-    trace: positiveTrace,
+    route: clipRouteToTerminalPads({ trace: positiveTrace, db }),
     pcbStackup,
     boardThickness,
   })
   const negativeWalk = walkTrace({
-    trace: negativeTrace,
+    route: clipRouteToTerminalPads({ trace: negativeTrace, db }),
     pcbStackup,
     boardThickness,
   })

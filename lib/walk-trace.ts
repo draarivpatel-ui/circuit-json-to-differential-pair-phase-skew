@@ -1,4 +1,4 @@
-import type { LayerRef, PcbTrace, Point } from "circuit-json"
+import type { LayerRef, PcbTraceRoutePoint, Point } from "circuit-json"
 import {
   type LayerChangeBoard,
   getLayerChangeLength,
@@ -41,7 +41,7 @@ type TraceRouteVertex = {
 }
 
 /**
- * Splits a trace route into straight pieces in stored route order, with
+ * Splits a trace's route into straight pieces in stored route order, with
  * the copper renderers' layer rules: copper runs between consecutive wire
  * points on the same layer, between a wire point and a via on one of the
  * via's layers, and across a through pad. Copper arriving at a via, or at a
@@ -61,12 +61,12 @@ type TraceRouteVertex = {
  * layers with no via between them.
  */
 export function walkTrace({
-  trace,
+  route,
   pcbStackup,
   boardThickness,
-}: { trace: PcbTrace } & LayerChangeBoard): TraceWalk | null {
+}: { route: PcbTraceRoutePoint[] } & LayerChangeBoard): TraceWalk | null {
   const walk = getTraceWalkFromVertices({
-    vertices: getTraceRouteVertices({ trace }),
+    vertices: getTraceRouteVertices({ route }),
     pcbStackup,
     boardThickness,
   })
@@ -215,12 +215,12 @@ export function reverseWalk(walk: TraceWalk): TraceWalk {
 
 /** The route's points in order, each with the layers copper joins there. */
 function getTraceRouteVertices({
-  trace,
+  route,
 }: {
-  trace: PcbTrace
+  route: PcbTraceRoutePoint[]
 }): TraceRouteVertex[] {
   const vertices: TraceRouteVertex[] = []
-  for (const routePoint of trace.route) {
+  for (const routePoint of route) {
     if (routePoint.route_type === "wire") {
       vertices.push({
         point: { x: routePoint.x, y: routePoint.y },

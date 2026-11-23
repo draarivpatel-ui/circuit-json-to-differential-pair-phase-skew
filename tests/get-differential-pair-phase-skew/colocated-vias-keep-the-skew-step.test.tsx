@@ -26,7 +26,11 @@ test("colocated vias keep their full skew step between straight runs", async () 
 
   const trace = cju(circuitJson).pcb_trace.get(pair.negative_trace.pcb_trace_id)
   if (trace === null) throw new Error("Missing negative trace")
-  const walk = walkTrace({ trace, pcbStackup: null, boardThickness: 0.8 })
+  const walk = walkTrace({
+    route: trace.route,
+    pcbStackup: null,
+    boardThickness: 0.8,
+  })
   if (walk === null) throw new Error("Negative trace has no planar copper")
   const { steps } = walk
   expect(steps).toHaveLength(2)
