@@ -268,7 +268,7 @@ function viaAt({
     edgeDistance({ step: steps[index], edge }) <= distance + MIN_OVERLAP;
     index++
   ) {
-    const length = edgeViaLength({ step: steps[index], edge })
+    const length = edgeLayerChangeLengthMm({ step: steps[index], edge })
     if (length > 0) return length
   }
   return 0
@@ -286,16 +286,16 @@ function edgeDistance({
   return step.startDistance + step.length
 }
 
-/** Length of the via directly before a step's start or after its end, in mm. */
-function edgeViaLength({
+/** Z-distance of the layer changes directly before a step's start or after its end, in mm. */
+function edgeLayerChangeLengthMm({
   step,
   edge,
 }: {
   step: TraceStep
   edge: "start" | "end"
 }): number {
-  if (edge === "start") return step.startViaLength
-  return step.endViaLength
+  if (edge === "start") return step.layerChangeLengthBeforeMm
+  return step.layerChangeLengthAfterMm
 }
 
 /** A span with no phase skew information. */

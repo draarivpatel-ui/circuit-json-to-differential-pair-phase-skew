@@ -82,7 +82,7 @@ test("an asymmetric via lands as a step at the via instead of smearing across th
     min_phase_skew: -1.6,
   })
 
-  // Mirror: DN drops first at x = -6 while routed from load, so DN's endViaLength
+  // Mirror: DN drops first at x = -6 while routed from load, so DN's layerChangeLengthAfterMm
   // on the reversed first step is what creates the flat step instead of a ramp.
   const [reversedNegativeFirst] = getDifferentialPairPhaseSkew({
     circuitJson: await renderPairBoard({

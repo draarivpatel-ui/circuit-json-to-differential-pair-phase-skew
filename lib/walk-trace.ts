@@ -16,10 +16,10 @@ export type TraceStep = {
   /** Distance along the walk from its first point to `start`, in mm. */
   startDistance: number
   length: number
-  /** Length of any via directly before `start`, in mm. */
-  startViaLength: number
-  /** Length of any via directly after `end`, in mm. */
-  endViaLength: number
+  /** Z-distance of any layer changes (vias or through pads) directly before `start`, in mm. */
+  layerChangeLengthBeforeMm: number
+  /** Z-distance of any layer changes directly after `end`, in mm. */
+  layerChangeLengthAfterMm: number
 }
 
 /** A trace's steps in walk order, and its total length including vias, in mm. */
@@ -28,12 +28,12 @@ export type TraceWalk = {
   length: number
 }
 
-/** A point the route passes through, the layer of the copper arriving at it, and its own width (none for a via). */
-type RouteCorner = {
+/** A point the route passes through, the layer of the copper arriving at it, its own width (none for a via) and the Z-distance of any layer change there. */
+type TraceRouteVertex = {
   point: Point
   layer: LayerRef
   width: number | undefined
-  viaLength: number
+  layerChangeLengthMm: number
 }
 
 /**
@@ -54,19 +54,23 @@ export function walkTrace({
   pcbStackup,
   boardThickness,
 }: { trace: PcbTrace } & LayerChangeBoard): TraceWalk {
-  const corners = routeCorners({ trace, pcbStackup, boardThickness })
-  const { steps, length } = cornerSteps({ corners })
+  const vertices = getTraceRouteVertices({ trace, pcbStackup, boardThickness })
+  const { steps, length } = getTraceWalkFromVertices({ vertices })
   return { steps: joinStraightSteps({ steps }), length }
 }
 
-/** One step from each route corner to the next, skipping zero-length ones, with via lengths at their ends. */
-function cornerSteps({ corners }: { corners: RouteCorner[] }): TraceWalk {
+/** One step from each route vertex to the next, skipping zero-length ones, with via lengths at their ends. */
+function getTraceWalkFromVertices({
+  vertices,
+}: {
+  vertices: TraceRouteVertex[]
+}): TraceWalk {
   const steps: TraceStep[] = []
   let distance = 0
-  let pendingViaLength = 0
-  for (let index = 0; index < corners.length; index++) {
-    const from = corners[index - 1]
-    const to = corners[index]
+  let pendingLayerChangeLengthMm = 0
+  for (let index = 0; index < vertices.length; index++) {
+    const from = vertices[index - 1]
+    const to = vertices[index]
     if (from !== undefined) {
       const length = Math.hypot(
         to.point.x - from.point.x,
@@ -81,21 +85,22 @@ function cornerSteps({ corners }: { corners: RouteCorner[] }): TraceWalk {
           width,
           startDistance: distance,
           length,
-          startViaLength: pendingViaLength,
-          endViaLength: 0,
+          layerChangeLengthBeforeMm: pendingLayerChangeLengthMm,
+          layerChangeLengthAfterMm: 0,
         })
       }
-      if (length > 0) pendingViaLength = 0
+      if (length > 0) pendingLayerChangeLengthMm = 0
       distance += length
     }
-    if (to.viaLength === 0) continue
-    distance += to.viaLength
-    pendingViaLength += to.viaLength
+    if (to.layerChangeLengthMm === 0) continue
+    distance += to.layerChangeLengthMm
+    pendingLayerChangeLengthMm += to.layerChangeLengthMm
     const previous = steps[steps.length - 1]
     if (previous === undefined) continue
     steps[steps.length - 1] = {
       ...previous,
-      endViaLength: previous.endViaLength + to.viaLength,
+      layerChangeLengthAfterMm:
+        previous.layerChangeLengthAfterMm + to.layerChangeLengthMm,
     }
   }
   return { steps, length: distance }
@@ -108,7 +113,7 @@ function joinStraightSteps({ steps }: { steps: TraceStep[] }): TraceStep[] {
     const previous = joined[joined.length - 1]
     if (
       previous === undefined ||
-      step.startViaLength > 0 ||
+      step.layerChangeLengthBeforeMm > 0 ||
       !continuesStraight({ previous, next: step })
     ) {
       joined.push(step)
@@ -118,7 +123,7 @@ function joinStraightSteps({ steps }: { steps: TraceStep[] }): TraceStep[] {
       ...previous,
       end: step.end,
       length: previous.length + step.length,
-      endViaLength: step.endViaLength,
+      layerChangeLengthAfterMm: step.layerChangeLengthAfterMm,
     }
   }
   return joined
@@ -155,36 +160,36 @@ export function reverseWalk(walk: TraceWalk): TraceWalk {
         start: step.end,
         end: step.start,
         startDistance: walk.length - step.startDistance - step.length,
-        startViaLength: step.endViaLength,
-        endViaLength: step.startViaLength,
+        layerChangeLengthBeforeMm: step.layerChangeLengthAfterMm,
+        layerChangeLengthAfterMm: step.layerChangeLengthBeforeMm,
       }))
       .reverse(),
   }
 }
 
 /** The route's points in order, each with the copper arriving at it. */
-function routeCorners({
+function getTraceRouteVertices({
   trace,
   pcbStackup,
   boardThickness,
-}: { trace: PcbTrace } & LayerChangeBoard): RouteCorner[] {
-  const corners: RouteCorner[] = []
+}: { trace: PcbTrace } & LayerChangeBoard): TraceRouteVertex[] {
+  const vertices: TraceRouteVertex[] = []
   for (const routePoint of trace.route) {
     if (routePoint.route_type === "wire") {
-      corners.push({
+      vertices.push({
         point: { x: routePoint.x, y: routePoint.y },
         layer: routePoint.layer,
         width: routePoint.width,
-        viaLength: 0,
+        layerChangeLengthMm: 0,
       })
       continue
     }
     if (routePoint.route_type === "via") {
-      corners.push({
+      vertices.push({
         point: { x: routePoint.x, y: routePoint.y },
         layer: routePoint.from_layer,
         width: undefined,
-        viaLength: getLayerChangeLength({
+        layerChangeLengthMm: getLayerChangeLength({
           fromLayer: routePoint.from_layer,
           toLayer: routePoint.to_layer,
           pcbStackup,
@@ -195,17 +200,17 @@ function routeCorners({
     }
     // A through-pad point is a straight run across the pad, which then
     // changes layers like a via when its end layer differs.
-    corners.push({
+    vertices.push({
       point: routePoint.start,
       layer: routePoint.start_layer,
       width: routePoint.width,
-      viaLength: 0,
+      layerChangeLengthMm: 0,
     })
-    corners.push({
+    vertices.push({
       point: routePoint.end,
       layer: routePoint.start_layer,
       width: routePoint.width,
-      viaLength: getLayerChangeLength({
+      layerChangeLengthMm: getLayerChangeLength({
         fromLayer: routePoint.start_layer,
         toLayer: routePoint.end_layer,
         pcbStackup,
@@ -213,5 +218,5 @@ function routeCorners({
       }),
     })
   }
-  return corners
+  return vertices
 }
