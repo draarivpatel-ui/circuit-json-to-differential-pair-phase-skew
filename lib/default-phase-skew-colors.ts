@@ -1,4 +1,9 @@
-/** CSS colours for drawing phase skew: by sign, at zero, and where it is unknown. */
+/**
+ * CSS colours for drawing phase skew: by sign, at zero, and where it is
+ * unknown. The sign is per trace, as KiCad shows it: positive where this
+ * trace has run farther than its partner, so the two traces of a pair show
+ * opposite colours at the same place.
+ */
 export type PhaseSkewColors = {
   /** Where this trace has run farther than its partner. */
   positive: string
@@ -6,7 +11,7 @@ export type PhaseSkewColors = {
   negative: string
   /** Where the two traces are in step. */
   zero: string
-  /** Where the traces do not run together, so the phase skew is unknown. */
+  /** Where phase skew is unknown. */
   unknown: string
 }
 
