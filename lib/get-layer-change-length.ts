@@ -19,7 +19,9 @@ export type LayerChangeBoard = {
  * half of an inner copper layer at either end, and every layer between. A
  * board without a stackup, or whose stackup lacks one of the two layers,
  * spaces its copper layers evenly through its thickness, as KiCad's default
- * stackup does: top to bottom is the whole thickness.
+ * stackup does: top to bottom is the whole thickness. Null when one of the
+ * layers isn't among the board's copper layers, so the distance can't be
+ * known.
  */
 export function getLayerChangeLength({
   fromLayer,
@@ -27,7 +29,9 @@ export function getLayerChangeLength({
   pcbStackup,
   boardThickness,
   copperLayerCount,
-}: { fromLayer: LayerRef; toLayer: LayerRef } & LayerChangeBoard): number {
+}: { fromLayer: LayerRef; toLayer: LayerRef } & LayerChangeBoard):
+  | number
+  | null {
   if (fromLayer === toLayer) return 0
   if (pcbStackup === null) {
     return getEvenLayerChangeLength({
@@ -64,7 +68,10 @@ export function getLayerChangeLength({
   return layerChangeLength
 }
 
-/** Z-distance between two copper layers spaced evenly through the board's thickness, in mm. */
+/**
+ * Z-distance between two copper layers spaced evenly through the board's
+ * thickness, in mm, or null when one of them isn't among its copper layers.
+ */
 function getEvenLayerChangeLength({
   fromLayer,
   toLayer,
@@ -73,25 +80,42 @@ function getEvenLayerChangeLength({
 }: { fromLayer: LayerRef; toLayer: LayerRef } & Omit<
   LayerChangeBoard,
   "pcbStackup"
->): number {
-  const layerGapCount = Math.abs(
-    getCopperLayerPosition({ layer: fromLayer, copperLayerCount }) -
-      getCopperLayerPosition({ layer: toLayer, copperLayerCount }),
+>): number | null {
+  const fromPosition = getCopperLayerPosition({
+    layer: fromLayer,
+    copperLayerCount,
+  })
+  const toPosition = getCopperLayerPosition({
+    layer: toLayer,
+    copperLayerCount,
+  })
+  if (fromPosition === null || toPosition === null) return null
+  return (
+    (boardThickness * Math.abs(fromPosition - toPosition)) /
+    (copperLayerCount - 1)
   )
-  return (boardThickness * layerGapCount) / (copperLayerCount - 1)
 }
 
-/** A copper layer's position from the top: 0 for top, k for innerk, and one less than the layer count for bottom. */
+/**
+ * A copper layer's position from the top: 0 for top, k for innerk, and one
+ * less than the layer count for bottom. Null when the board has no such
+ * layer: an inner layer past its count, or any layer of a board with fewer
+ * than two.
+ */
 function getCopperLayerPosition({
   layer,
   copperLayerCount,
 }: {
   layer: LayerRef
   copperLayerCount: number
-}): number {
+}): number | null {
+  if (copperLayerCount < 2) return null
   if (layer === "top") return 0
-  if (layer === "bottom") return copperLayerCount - 1
-  return Number(layer.slice(INNER_LAYER_PREFIX.length))
+  const bottomPosition = copperLayerCount - 1
+  if (layer === "bottom") return bottomPosition
+  const innerPosition = Number(layer.slice(INNER_LAYER_PREFIX.length))
+  if (innerPosition >= bottomPosition) return null
+  return innerPosition
 }
 
 /** Inner copper layers are named this followed by their position from the top, as in `inner1`. */

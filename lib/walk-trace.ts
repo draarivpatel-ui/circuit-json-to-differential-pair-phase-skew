@@ -58,7 +58,8 @@ type TraceRouteVertex = {
  * Null when there is nothing to measure phase skew along: the route has no
  * planar copper, such as a via in pad joining two pads at the same point,
  * or its copper isn't continuous, such as two wire points on different
- * layers with no via between them, or its length isn't finite.
+ * layers with no via between them, or it changes to a layer the board
+ * doesn't have, or its length isn't finite.
  */
 export function walkTrace({
   route,
@@ -123,6 +124,7 @@ function getTraceWalkFromVertices({
       toLayer: layer,
       ...layerChangeBoard,
     })
+    if (layerChangeLengthMm === null) return null
     if (layerChangeLengthMm === 0) continue
     distance += layerChangeLengthMm
     pendingLayerChangeLengthMm += layerChangeLengthMm
