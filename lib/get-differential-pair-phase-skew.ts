@@ -10,6 +10,7 @@ import type {
   PcbTrace,
   SourceBus,
 } from "circuit-json"
+import { pcb_board } from "circuit-json"
 import { clipRouteToTerminalPads } from "./clip-route-to-terminal-pads"
 import { cutRouteTapers } from "./cut-route-tapers"
 import type {
@@ -30,6 +31,12 @@ const STANDARD_BOARD_THICKNESS = 1.6
 /** Copper layer count assumed for a pair that is routed without a board. */
 const STANDARD_COPPER_LAYER_COUNT = 2
 
+/** The board fields a layer change reads, with circuit-json's own `pcb_board` validation and defaults. */
+const BOARD_DIMENSIONS_SCHEMA = pcb_board.pick({
+  thickness: true,
+  num_layers: true,
+})
+
 /** The positive and negative walks of a pair, each oriented from its source end. */
 type PairWalks = { positive: TraceWalk; negative: TraceWalk }
 
@@ -43,8 +50,11 @@ type PairWalks = { positive: TraceWalk; negative: TraceWalk }
  * Distances are copper length: planar length plus each layer change's
  * Z-distance through the board's stackup, with routing inside the start
  * and end pads measured straight from the pad centre to the pad edge, as
- * KiCad does. A pair is skipped when either trace has no planar copper or
- * copper that isn't continuous. Each trace with exactly one end
+ * KiCad does. A pair is skipped, without affecting the others, when either
+ * trace has no planar copper, has copper that isn't continuous or has no
+ * finite length, or its board's dimensions fail the `pcb_board` schema.
+ *
+ * Each trace with exactly one end
  * port marked `is_output` is walked from that end; if only one trace has
  * such a port, the other is oriented to match it by end distance; if neither
  * does, distances are measured from the positive trace's first route point
@@ -172,6 +182,7 @@ function walkPair({
   board: PcbBoard | undefined
 }): PairWalks | null {
   const layerChangeBoard = getLayerChangeBoard({ db, board })
+  if (layerChangeBoard === null) return null
   const positiveWalk = walkTrace({
     route: clipRouteToTerminalPads({
       route: cutRouteTapers({ route: positiveTrace.route }),
@@ -210,14 +221,20 @@ function walkPair({
   return { positive, negative: reverseWalk(negative) }
 }
 
-/** The board's stackup, thickness and copper layer count, or a standard 2-layer board's without a board. */
+/**
+ * The board's stackup, thickness and copper layer count, or a standard
+ * 2-layer board's without a board. Thickness and layer count are read
+ * through circuit-json's `pcb_board` schema, so a record that omits them,
+ * such as unparsed or older Circuit JSON, gets the schema's defaults. Null
+ * when the record's values fail the schema.
+ */
 function getLayerChangeBoard({
   db,
   board,
 }: {
   db: CircuitJsonUtilObjects
   board: PcbBoard | undefined
-}): LayerChangeBoard {
+}): LayerChangeBoard | null {
   if (board === undefined) {
     return {
       pcbStackup: null,
@@ -225,10 +242,12 @@ function getLayerChangeBoard({
       copperLayerCount: STANDARD_COPPER_LAYER_COUNT,
     }
   }
+  const boardDimensions = BOARD_DIMENSIONS_SCHEMA.safeParse(board)
+  if (!boardDimensions.success) return null
   return {
     pcbStackup: db.pcb_stackup.getWhere({ pcb_board_id: board.pcb_board_id }),
-    boardThickness: board.thickness,
-    copperLayerCount: board.num_layers,
+    boardThickness: boardDimensions.data.thickness,
+    copperLayerCount: boardDimensions.data.num_layers,
   }
 }
 
