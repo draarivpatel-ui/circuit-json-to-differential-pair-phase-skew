@@ -10,8 +10,8 @@ const LAYER_SPACING_MM = 1.6 / 3
 
 test("without a stackup, a via to an inner layer spans only the evenly spaced layers between", async () => {
   // A 1.6 mm 4-layer board with no pcb_stackup: DN hops top -> inner1 -> top.
-  // As in KiCad's default stackup, copper layers are evenly spaced, so each
-  // via is a third of the board thick, not all of it.
+  // The length is estimated with evenly spaced copper layers, so each via
+  // is a third of the board thick, not all of it.
   const circuitJson = await renderPairBoard({
     positivePath: [],
     negativePath: [

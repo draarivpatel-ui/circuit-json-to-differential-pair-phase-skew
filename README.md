@@ -54,8 +54,11 @@ A pair is left out, without affecting the other pairs, when it can't be
 measured: a side routed as more than one `pcb_trace`, a trace with no planar
 copper, copper that jumps layers without a via, a layer change to a copper
 layer the board doesn't have, or a board whose thickness or layer count fails
-circuit-json's `pcb_board` schema. A board record that
-omits them gets the schema's defaults (1.4 mm, 4 layers).
+circuit-json's `pcb_board` schema. A board record that omits them gets the
+schema's defaults (1.4 mm, 4 layers).
+
+A via counts its height through the board's `pcb_stackup`. Without one, it is
+estimated by spacing the board's copper layers evenly through its thickness.
 
 The package ships its TypeScript source (`lib/index.ts`) without a build
 step, and `circuit-json` is a peer dependency. Import it from Bun or a

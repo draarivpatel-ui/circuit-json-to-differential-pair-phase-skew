@@ -16,12 +16,14 @@ export type LayerChangeBoard = {
  * Z-distance in mm between two copper layers, zero when they are the same.
  *
  * With a stackup this is KiCad's via length: all of an outer copper layer,
- * half of an inner copper layer at either end, and every layer between. A
- * board without a stackup, or whose stackup lacks one of the two layers,
- * spaces its copper layers evenly through its thickness, as KiCad's default
- * stackup does: top to bottom is the whole thickness. Null when one of the
- * layers isn't among the board's copper layers, so the distance can't be
- * known.
+ * half of an inner copper layer at either end, and every layer between.
+ * For a board without a stackup, or whose stackup lacks one of the two
+ * layers, it is an estimate: copper layers spaced evenly through the board's
+ * thickness, so top to bottom is the whole thickness. KiCad's default
+ * stackup is close but not equal, as it spaces the dielectrics after taking
+ * off copper and solder mask (1.58 mm rather than 1.6 mm top to bottom on
+ * a 1.6 mm 4-layer board). Null when one of the layers isn't among the
+ * board's copper layers, so the distance can't be known.
  */
 export function getLayerChangeLength({
   fromLayer,
