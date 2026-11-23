@@ -43,7 +43,7 @@ The rules below add what those guides don't cover. Where they disagree, this fil
 
 - **No `!!`.** Write the comparison: `point.via === true`.
 - **No regular expressions in `lib/`.** Use `startsWith`, `includes`, `indexOf`, `slice`, `split`, or a small named helper. Tests may use a regex only inside an assertion.
-- **Name magic numbers** as constants with a one-line reason (`const SAMPLE_LENGTH = 0.05` for the phase skew sample length in mm).
+- **Name magic numbers** as constants with a one-line reason (`const RAMP_SAMPLE_SPACING_TARGET_MM = 0.05` for the target spacing of phase skew samples along a ramp).
 
 ### Reuse and size
 
