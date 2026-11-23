@@ -2,8 +2,8 @@ import type { PcbPlatedHole, PcbSmtPad, Point } from "circuit-json"
 
 /**
  * A pad's outer copper outline in board coordinates, drill included: a
- * rounded rectangle (a circle or pill is one with a full corner radius) or
- * a polygon.
+ * rounded rectangle (a circle or pill is one with a full corner radius), an
+ * ellipse (an oval plated pad, as renderers draw it) or a polygon.
  */
 export type PadOutline =
   | {
@@ -12,6 +12,13 @@ export type PadOutline =
       widthMm: number
       heightMm: number
       cornerRadiusMm: number
+      ccwRotationDegrees: number
+    }
+  | {
+      kind: "ellipse"
+      center: Point
+      widthMm: number
+      heightMm: number
       ccwRotationDegrees: number
     }
   | { kind: "polygon"; points: Point[] }
@@ -66,6 +73,15 @@ export function getPlatedHoleOutline({
   }
   // Oval and pill holes: the only plated holes with an outer width.
   if ("outer_width" in platedHole) {
+    if (platedHole.shape === "oval") {
+      return {
+        kind: "ellipse",
+        center,
+        widthMm: platedHole.outer_width,
+        heightMm: platedHole.outer_height,
+        ccwRotationDegrees: platedHole.ccw_rotation,
+      }
+    }
     return {
       kind: "rounded_rect",
       center,
@@ -125,6 +141,13 @@ export function isInsidePadOutline({
     },
     ccwRotationDegrees: -padOutline.ccwRotationDegrees,
   })
+  if (padOutline.kind === "ellipse") {
+    return (
+      (local.x / (padOutline.widthMm / 2)) ** 2 +
+        (local.y / (padOutline.heightMm / 2)) ** 2 <=
+      1
+    )
+  }
   const cornerRadiusMm = Math.min(
     padOutline.cornerRadiusMm,
     padOutline.widthMm / 2,
