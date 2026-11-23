@@ -5,6 +5,7 @@
     "url": "https://github.com/tscircuit/circuit-json-to-differential-pair-phase-skew.git"
   },
   "module": "lib/index.ts",
+  "types": "lib/index.ts",
   "type": "module",
   "version": "0.0.1",
   "files": [
