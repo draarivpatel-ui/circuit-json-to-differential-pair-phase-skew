@@ -1,0 +1,141 @@
+import { expect, test } from "bun:test"
+import { cju } from "@tscircuit/circuit-json-util"
+import { getDifferentialPairPhaseSkew } from "lib/index"
+import { createBasicAutorouter } from "tests/fixtures/create-basic-autorouter"
+import { phaseSkewSvg } from "tests/fixtures/phase-skew-svg"
+import { renderCircuit } from "tests/fixtures/render-circuit"
+
+test("a through pad that crosses its pad counts the crossing once, then its layer change", async () => {
+  // DP enters a 1.2 mm claimed via 0.5 mm left of its centre, crosses it on
+  // top to 0.5 mm right of its centre, and leaves on bottom. The 1 mm
+  // crossing is planar copper DN also runs beside, so DP ends up ahead by
+  // just the board thickness.
+  const circuitJson = await renderCircuit(
+    <board
+      width="22mm"
+      height="6mm"
+      autorouter={{
+        algorithmFn: createBasicAutorouter(async (simpleRouteJson) => {
+          const via = simpleRouteJson.obstacles.find(
+            (obstacle) => obstacle.netIsAssignable,
+          )!
+          return simpleRouteJson.connections.map((connection) => {
+            const [start, end] = connection.pointsToConnect
+            if (start.layer === end.layer) {
+              return {
+                type: "pcb_trace",
+                pcb_trace_id: "trace_dn",
+                connection_name: connection.name,
+                route: [
+                  { ...start, route_type: "wire", width: 0.15 },
+                  { ...end, route_type: "wire", width: 0.15 },
+                ],
+              }
+            }
+            return {
+              type: "pcb_trace",
+              pcb_trace_id: "trace_dp",
+              connection_name: connection.name,
+              route: [
+                { ...start, route_type: "wire", width: 0.15 },
+                {
+                  x: -4.5,
+                  y: 0.4,
+                  route_type: "wire",
+                  width: 0.15,
+                  layer: "top",
+                },
+                {
+                  route_type: "through_obstacle",
+                  start: { x: -4.5, y: 0.4 },
+                  end: { x: -3.5, y: 0.4 },
+                  from_layer: "top",
+                  to_layer: "bottom",
+                  width: 0.15,
+                  circuitJsonMetadata: via.circuitJsonMetadata,
+                },
+                {
+                  x: -3.5,
+                  y: 0.4,
+                  route_type: "wire",
+                  width: 0.15,
+                  layer: "bottom",
+                },
+                { ...end, route_type: "wire", width: 0.15 },
+              ],
+            }
+          })
+        }),
+      }}
+    >
+      <testpoint
+        name="P1"
+        footprintVariant="pad"
+        padDiameter={0.3}
+        doNotPlace
+        pcbX={-9}
+        pcbY={0.4}
+      />
+      <testpoint
+        name="P2"
+        footprintVariant="pad"
+        padDiameter={0.3}
+        doNotPlace
+        layer="bottom"
+        pcbX={9}
+        pcbY={0.4}
+      />
+      <testpoint
+        name="N1"
+        footprintVariant="pad"
+        padDiameter={0.3}
+        doNotPlace
+        layer="bottom"
+        pcbX={-9}
+        pcbY={-0.4}
+      />
+      <testpoint
+        name="N2"
+        footprintVariant="pad"
+        padDiameter={0.3}
+        doNotPlace
+        layer="bottom"
+        pcbX={9}
+        pcbY={-0.4}
+      />
+      <via
+        pcbX={-4}
+        pcbY={0.4}
+        fromLayer="top"
+        toLayer="bottom"
+        holeDiameter={0.6}
+        outerDiameter={1.2}
+        netIsAssignable
+      />
+      <trace name="DP" from=".P1 > .pin1" to=".P2 > .pin1" />
+      <trace name="DN" from=".N1 > .pin1" to=".N2 > .pin1" />
+      <differentialpair
+        name="PAIR"
+        positiveConnection="DP"
+        negativeConnection="DN"
+        pcbTraceGap="0.65mm"
+      />
+      <pcbnotetext
+        pcbY={2}
+        fontSize={0.4}
+        text="DP crosses a claimed via on top, then drops to bottom"
+      />
+    </board>,
+  )
+  const db = cju(circuitJson)
+
+  const [dp] = db.pcb_trace.list()
+  expect(
+    dp.route.find((point) => point.route_type === "through_pad"),
+  ).toMatchObject({ start: { x: -4.5, y: 0.4 }, end: { x: -3.5, y: 0.4 } })
+  const [pair] = getDifferentialPairPhaseSkew({ circuitJson })
+  const boardThickness = db.pcb_board.list()[0].thickness
+  expect(pair.max_abs_phase_skew).toBeCloseTo(boardThickness, 5)
+  expect(pair.end_to_end_length_delta).toBeCloseTo(boardThickness, 5)
+  await expect(phaseSkewSvg(circuitJson)).toMatchSvgSnapshot(import.meta.path)
+})
