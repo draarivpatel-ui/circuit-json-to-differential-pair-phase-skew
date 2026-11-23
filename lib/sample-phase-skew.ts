@@ -30,18 +30,18 @@ export function samplePhaseSkew({
     const stepEnd = step.startDistance + step.length
     while (
       spanIndex + 1 < spans.length &&
-      spans[spanIndex].to <= step.startDistance
+      spans[spanIndex].endWalkDistanceMm <= step.startDistance
     ) {
       spanIndex++
     }
     for (
       let index = spanIndex;
-      index < spans.length && spans[index].from < stepEnd;
+      index < spans.length && spans[index].startWalkDistanceMm < stepEnd;
       index++
     ) {
       const span = spans[index]
-      const from = Math.max(step.startDistance, span.from)
-      const to = Math.min(stepEnd, span.to)
+      const from = Math.max(step.startDistance, span.startWalkDistanceMm)
+      const to = Math.min(stepEnd, span.endWalkDistanceMm)
       if (to - from <= MIN_OVERLAP) continue
       for (const segment of sampleSpan({ step, span, from, to })) {
         segments.push(segment)
@@ -91,11 +91,13 @@ function rampPieceCount({
   from: number
   to: number
 }): number {
-  const startSkew = phaseSkewAt({ span, distance: from })
-  const endSkew = phaseSkewAt({ span, distance: to })
-  if (startSkew === null || endSkew === null) return 1
+  const startPhaseSkewMm = phaseSkewAt({ span, distance: from })
+  const endPhaseSkewMm = phaseSkewAt({ span, distance: to })
+  if (startPhaseSkewMm === null || endPhaseSkewMm === null) return 1
   const byLength = Math.ceil((to - from) / SAMPLE_LENGTH)
-  const bySkew = Math.ceil(Math.abs(endSkew - startSkew) / PHASE_SKEW_STEP)
+  const bySkew = Math.ceil(
+    Math.abs(endPhaseSkewMm - startPhaseSkewMm) / PHASE_SKEW_STEP,
+  )
   return Math.max(1, Math.min(byLength, bySkew))
 }
 
@@ -107,9 +109,13 @@ function phaseSkewAt({
   span: PhaseSkewSpan
   distance: number
 }): number | null {
-  if (span.startSkew === null) return null
-  const t = (distance - span.from) / (span.to - span.from)
-  return roundPhaseSkew(span.startSkew + t * (span.endSkew - span.startSkew))
+  if (span.startPhaseSkewMm === null) return null
+  const t =
+    (distance - span.startWalkDistanceMm) /
+    (span.endWalkDistanceMm - span.startWalkDistanceMm)
+  return roundPhaseSkew(
+    span.startPhaseSkewMm + t * (span.endPhaseSkewMm - span.startPhaseSkewMm),
+  )
 }
 
 /** The point on a step at a distance along the whole walk. */

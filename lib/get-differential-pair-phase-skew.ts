@@ -142,10 +142,10 @@ function getPairPhaseSkew({
   }
   if (runs.length > 0) {
     pair.max_abs_phase_skew = Math.max(
-      positiveTrack.range.max,
-      -positiveTrack.range.min,
-      negativeTrack.range.max,
-      -negativeTrack.range.min,
+      positiveTrack.range.maxPhaseSkewMm,
+      -positiveTrack.range.minPhaseSkewMm,
+      negativeTrack.range.maxPhaseSkewMm,
+      -negativeTrack.range.minPhaseSkewMm,
     )
   }
   return pair
@@ -207,8 +207,8 @@ function getPhaseSkewTrace({
 }): PhaseSkewTrace {
   return {
     pcb_trace_id: trace.pcb_trace_id,
-    max_phase_skew: track.range.max,
-    min_phase_skew: track.range.min,
+    max_phase_skew: track.range.maxPhaseSkewMm,
+    min_phase_skew: track.range.minPhaseSkewMm,
     segments: samplePhaseSkew({ steps: walk.steps, spans: track.spans }),
   }
 }
