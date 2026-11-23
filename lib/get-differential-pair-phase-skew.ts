@@ -7,11 +7,11 @@ import type {
   AnyCircuitElement,
   PcbBoard,
   PcbPort,
-  PcbStackup,
   PcbTrace,
   SourceBus,
 } from "circuit-json"
 import { clipRouteToTerminalPads } from "./clip-route-to-terminal-pads"
+import type { LayerChangeBoard } from "./get-layer-change-length"
 import type {
   DifferentialPairPhaseSkew,
   PhaseSkewTrace,
@@ -25,6 +25,9 @@ import { type TraceWalk, reverseWalk, walkTrace } from "./walk-trace"
 
 /** Board thickness in mm assumed for a pair that is routed without a board. */
 const STANDARD_BOARD_THICKNESS = 1.6
+
+/** Copper layer count assumed for a pair that is routed without a board. */
+const STANDARD_COPPER_LAYER_COUNT = 2
 
 /** The positive and negative walks of a pair, each oriented from its source end. */
 type PairWalks = { positive: TraceWalk; negative: TraceWalk }
@@ -167,21 +170,14 @@ function walkPair({
   db: CircuitJsonUtilObjects
   board: PcbBoard | undefined
 }): PairWalks | null {
-  let pcbStackup: PcbStackup | null = null
-  let boardThickness = STANDARD_BOARD_THICKNESS
-  if (board !== undefined) {
-    pcbStackup = db.pcb_stackup.getWhere({ pcb_board_id: board.pcb_board_id })
-    boardThickness = board.thickness
-  }
+  const layerChangeBoard = getLayerChangeBoard({ db, board })
   const positiveWalk = walkTrace({
     route: clipRouteToTerminalPads({ trace: positiveTrace, db }),
-    pcbStackup,
-    boardThickness,
+    ...layerChangeBoard,
   })
   const negativeWalk = walkTrace({
     route: clipRouteToTerminalPads({ trace: negativeTrace, db }),
-    pcbStackup,
-    boardThickness,
+    ...layerChangeBoard,
   })
   if (positiveWalk === null || negativeWalk === null) return null
   let positive = positiveWalk
@@ -205,6 +201,28 @@ function walkPair({
     return { positive: reverseWalk(positive), negative }
   }
   return { positive, negative: reverseWalk(negative) }
+}
+
+/** The board's stackup, thickness and copper layer count, or a standard 2-layer board's without a board. */
+function getLayerChangeBoard({
+  db,
+  board,
+}: {
+  db: CircuitJsonUtilObjects
+  board: PcbBoard | undefined
+}): LayerChangeBoard {
+  if (board === undefined) {
+    return {
+      pcbStackup: null,
+      boardThickness: STANDARD_BOARD_THICKNESS,
+      copperLayerCount: STANDARD_COPPER_LAYER_COUNT,
+    }
+  }
+  return {
+    pcbStackup: db.pcb_stackup.getWhere({ pcb_board_id: board.pcb_board_id }),
+    boardThickness: board.thickness,
+    copperLayerCount: board.num_layers,
+  }
 }
 
 /** One trace's segments and phase skew range, as drawn. */

@@ -85,13 +85,11 @@ const TAPER_WIDTH_STEP_MM = 0.01
  */
 export function walkTrace({
   route,
-  pcbStackup,
-  boardThickness,
+  ...layerChangeBoard
 }: { route: PcbTraceRoutePoint[] } & LayerChangeBoard): TraceWalk | null {
   const walk = getTraceWalkFromVertices({
     vertices: getTraceRouteVertices({ route }),
-    pcbStackup,
-    boardThickness,
+    ...layerChangeBoard,
   })
   if (walk === null || walk.steps.length === 0) return null
   return {
@@ -107,8 +105,7 @@ export function walkTrace({
  */
 function getTraceWalkFromVertices({
   vertices,
-  pcbStackup,
-  boardThickness,
+  ...layerChangeBoard
 }: { vertices: TraceRouteVertex[] } & LayerChangeBoard): TraceWalk | null {
   const steps: TraceStep[] = []
   let distance = 0
@@ -154,8 +151,7 @@ function getTraceWalkFromVertices({
     const layerChangeLengthMm = getLayerChangeLength({
       fromLayer: arrivingLayer,
       toLayer: layer,
-      pcbStackup,
-      boardThickness,
+      ...layerChangeBoard,
     })
     if (layerChangeLengthMm === 0) continue
     distance += layerChangeLengthMm

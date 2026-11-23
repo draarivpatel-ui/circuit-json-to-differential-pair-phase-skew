@@ -30,6 +30,7 @@ test("colocated vias keep their full skew step between straight runs", async () 
     route: trace.route,
     pcbStackup: null,
     boardThickness: 0.8,
+    copperLayerCount: 2,
   })
   if (walk === null) throw new Error("Negative trace has no planar copper")
   const { steps } = walk
