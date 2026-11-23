@@ -24,10 +24,11 @@
     "bun-match-svg": "0.0.17",
     "circuit-json": "0.0.561",
     "react": "19.3.1",
-    "tscircuit": "0.0.3285"
+    "tscircuit": "0.0.3285",
+    "typescript": "^5.9.3"
   },
   "peerDependencies": {
-    "typescript": "^5.9.3"
+    "circuit-json": ">=0.0.561"
   },
   "dependencies": {
     "@tscircuit/circuit-json-util": "0.0.135"

@@ -53,3 +53,8 @@ positive trace is ahead it is blue and the negative trace beside it is red.
 A pair is left out when it can't be measured: a side routed as more than one
 `pcb_trace`, a trace with no planar copper, or copper that jumps layers
 without a via.
+
+The package ships its TypeScript source (`lib/index.ts`) without a build
+step, and `circuit-json` is a peer dependency. Import it from Bun or a
+bundler, and type-check it with `"moduleResolution": "bundler"` and an
+ES2017 or later `lib`, as in the repo's `tsconfig.json`.
