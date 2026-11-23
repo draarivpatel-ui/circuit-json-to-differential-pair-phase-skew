@@ -3,6 +3,9 @@ import type { PcbPlatedHole, PcbSmtPad, Point } from "circuit-json"
 /** Halvings of the segment that crosses a convex pad's edge; 40 locate the edge to under a picometre on any board. */
 const PAD_EXIT_BISECTION_STEPS = 40
 
+/** A point this close to a polygon pad's edge, in mm, is on the edge: rounding, not a gap. */
+const POLYGON_EDGE_TOLERANCE_MM = 1e-9
+
 /**
  * A pad's outer copper outline in board coordinates, drill included: a
  * rounded rectangle (a circle or pill is one with a full corner radius), an
@@ -295,7 +298,7 @@ function getCircleOutline({
   }
 }
 
-/** True when a point lies inside a polygon (even-odd rule). */
+/** True when a point lies inside a polygon (even-odd rule) or on its edge. */
 function isInsidePolygon({
   points,
   point,
@@ -303,6 +306,7 @@ function isInsidePolygon({
   points: Point[]
   point: Point
 }): boolean {
+  if (isOnPolygonEdge({ points, point })) return true
   let inside = false
   for (let index = 0; index < points.length; index++) {
     const start = points[index]
@@ -313,6 +317,32 @@ function isInsidePolygon({
     if (point.x <= crossingX) inside = !inside
   }
   return inside
+}
+
+/**
+ * True when a point lies on one of a polygon's edges. The even-odd rule
+ * alone counts points on some edges as inside and on others as outside.
+ */
+function isOnPolygonEdge({
+  points,
+  point,
+}: {
+  points: Point[]
+  point: Point
+}): boolean {
+  for (let index = 0; index < points.length; index++) {
+    const start = points[index]
+    const end = points[(index + 1) % points.length]
+    const edge = { x: end.x - start.x, y: end.y - start.y }
+    const fromStart = { x: point.x - start.x, y: point.y - start.y }
+    const edgeLength = Math.hypot(edge.x, edge.y)
+    const along = (fromStart.x * edge.x + fromStart.y * edge.y) / edgeLength
+    if (along < -POLYGON_EDGE_TOLERANCE_MM) continue
+    if (along > edgeLength + POLYGON_EDGE_TOLERANCE_MM) continue
+    const across = Math.abs(cross({ a: edge, b: fromStart })) / edgeLength
+    if (across <= POLYGON_EDGE_TOLERANCE_MM) return true
+  }
+  return false
 }
 
 /** A point turned counter-clockwise about the origin. */
