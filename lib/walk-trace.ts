@@ -92,7 +92,8 @@ function getTraceWalkFromVertices({
   for (let index = 0; index < vertices.length; index++) {
     const from = vertices[index - 1]
     const to = vertices[index]
-    const arrivingLayer = layer ?? to.layers[0]
+    const arrivingLayer =
+      layer ?? getFirstArrivingLayer({ first: to, next: vertices[index + 1] })
     if (!to.layers.includes(arrivingLayer)) return null
     if (from !== undefined) {
       const length = Math.hypot(
@@ -134,6 +135,23 @@ function getTraceWalkFromVertices({
     }
   }
   return { steps, length: distance }
+}
+
+/**
+ * The layer the walk starts on at the route's first point: a wire point's
+ * own layer, or, at a via, the one of its two layers that leaves the other
+ * for the next point, whichever way the via is stored.
+ */
+function getFirstArrivingLayer({
+  first,
+  next,
+}: {
+  first: TraceRouteVertex
+  next: TraceRouteVertex | undefined
+}): LayerRef {
+  if (first.layers.length === 1 || next === undefined) return first.layers[0]
+  if (next.layers.includes(first.layers[1])) return first.layers[0]
+  return first.layers[1]
 }
 
 /** The layer copper leaves a vertex on: a wire point's own layer, or the other of the two layers a via joins. */
