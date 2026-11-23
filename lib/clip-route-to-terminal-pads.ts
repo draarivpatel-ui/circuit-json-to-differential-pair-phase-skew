@@ -33,7 +33,9 @@ const STRAIGHT_PATH_TOLERANCE_MM = 1e-9
  * KiCad's tuning path clips routing inside pads (`OptimiseTraceInPad`). A
  * jog hidden inside a pad, or inside its drill, so adds no phase skew. When
  * the route stays inside the pad up to a via, it runs straight to the via,
- * which keeps its layer change. Pads are the end ports' pads on the end
+ * which keeps its layer change. When that straight line would leave the
+ * pad's copper, across a concave pad's notch, the routing inside the pad is
+ * kept as drawn. Pads are the end ports' pads on the end
  * point's layer, measured by their outer copper outline. Cut tapers
  * first, so the wire point moved to a pad's edge keeps the taper's width
  * there.
@@ -119,7 +121,8 @@ function getPortPadOutline({
  * layer and finds where it first leaves the pad, or the via it reaches
  * while still inside. Null when there is no pad or nothing to clip: the
  * route already runs straight from its end to where it leaves the pad or
- * to the via, as a teardrop does, so its points and widths are kept.
+ * to the via, as a teardrop does, or a straight line there would cross a
+ * gap in a concave pad, so its points and widths are kept.
  */
 function findPadClip({
   route,
@@ -165,7 +168,8 @@ function findPadClip({
         continue
       }
       if (
-        isStraightPath({
+        keepsInPadRouting({
+          padOutline,
           endWire,
           lastInsideWire,
           insidePathLengthMm,
@@ -177,7 +181,8 @@ function findPadClip({
       return { keptIndex: index, insertedWire: null }
     }
     if (
-      isStraightPath({
+      keepsInPadRouting({
+        padOutline,
         endWire,
         lastInsideWire,
         insidePathLengthMm,
@@ -195,16 +200,19 @@ function findPadClip({
 }
 
 /**
- * True when the route from the end in the pad, through its points inside
- * the pad, on to `pathEnd` is a straight line, so clipping would change
- * nothing.
+ * True when the routing inside the pad, from the end in the pad through its
+ * points inside the pad on to `pathEnd`, stays as drawn: it is already a
+ * straight line, so clipping would change nothing, or a straight line to
+ * `pathEnd` would leave the pad's copper, as across a concave pad's notch.
  */
-function isStraightPath({
+function keepsInPadRouting({
+  padOutline,
   endWire,
   lastInsideWire,
   insidePathLengthMm,
   pathEnd,
 }: {
+  padOutline: PadOutline
   endWire: Point
   lastInsideWire: Point
   /** Routed length from `endWire` to `lastInsideWire`, in mm. */
@@ -213,9 +221,15 @@ function isStraightPath({
 }): boolean {
   const pathLengthMm =
     insidePathLengthMm + distance({ a: lastInsideWire, b: pathEnd })
-  return (
+  if (
     pathLengthMm - distance({ a: endWire, b: pathEnd }) <=
     STRAIGHT_PATH_TOLERANCE_MM
+  ) {
+    return true
+  }
+  return (
+    getPadOutlineExitPoint({ padOutline, start: endWire, end: pathEnd }) !==
+    null
   )
 }
 
