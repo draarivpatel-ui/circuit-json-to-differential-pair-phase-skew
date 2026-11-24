@@ -1,6 +1,6 @@
 import { expect, test } from "bun:test"
 import { cju } from "@tscircuit/circuit-json-util"
-import { getDifferentialPairPhaseSkew } from "lib/index"
+import { getFirstPhaseSkewPair } from "tests/fixtures/get-first-phase-skew-pair"
 import { renderPairBoard } from "tests/fixtures/pair-board"
 import { phaseSkewSvg } from "tests/fixtures/phase-skew-svg"
 import { segmentAtX } from "tests/fixtures/segment-at-x"
@@ -18,7 +18,7 @@ test("without a stackup, each via is as long as the board is thick", async () =>
   })
   expect(cju(circuitJson).pcb_stackup.list()).toEqual([])
 
-  const [pair] = getDifferentialPairPhaseSkew({ circuitJson })
+  const pair = getFirstPhaseSkewPair({ circuitJson })
   const { segments } = pair.positive_trace
   expect(segmentAtX({ segments, x: 0 }).phase_skew).toBeCloseTo(-0.8, 5)
   expect(segmentAtX({ segments, x: 9 }).phase_skew).toBeCloseTo(-1.6, 5)

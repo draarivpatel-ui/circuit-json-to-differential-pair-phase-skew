@@ -79,8 +79,8 @@ test("matched USB trace totals hide 1.236 mm of mid-route phase skew", async () 
   )
 
   const [positive, negative] = cju(circuitJson).pcb_trace.list()
-  expect(positive.trace_length).toBeCloseTo(25.2360679775, 9)
-  expect(negative.trace_length).toBeCloseTo(25.2360679775, 9)
+  expect(positive?.trace_length).toBeCloseTo(25.2360679775, 9)
+  expect(negative?.trace_length).toBeCloseTo(25.2360679775, 9)
   expect(await runAllRoutingChecks(circuitJson)).toEqual([])
   expect(getDifferentialPairPhaseSkew({ circuitJson })).toEqual([
     expect.objectContaining({

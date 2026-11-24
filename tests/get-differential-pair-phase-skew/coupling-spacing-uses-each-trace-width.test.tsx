@@ -1,5 +1,5 @@
 import { expect, test } from "bun:test"
-import { getDifferentialPairPhaseSkew } from "lib/index"
+import { getFirstPhaseSkewPair } from "tests/fixtures/get-first-phase-skew-pair"
 import { renderPairBoard } from "tests/fixtures/pair-board"
 import { phaseSkewSvg } from "tests/fixtures/phase-skew-svg"
 import { segmentAtX } from "tests/fixtures/segment-at-x"
@@ -19,7 +19,7 @@ test("the spacing allowance uses the mean of the two trace widths", async () => 
     pcbTraceGap: "0.25mm",
     positiveThickness: "0.45mm",
   })
-  const [pair] = getDifferentialPairPhaseSkew({ circuitJson })
+  const pair = getFirstPhaseSkewPair({ circuitJson })
 
   const beside = segmentAtX({ segments: pair.positive_trace.segments, x: -9 })
   expect(beside.phase_skew).toBe(0)

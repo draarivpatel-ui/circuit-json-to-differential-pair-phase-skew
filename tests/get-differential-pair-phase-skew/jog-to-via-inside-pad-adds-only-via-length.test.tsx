@@ -1,6 +1,7 @@
 import { expect, test } from "bun:test"
+import { ok } from "node:assert/strict"
 import { cju } from "@tscircuit/circuit-json-util"
-import { getDifferentialPairPhaseSkew } from "lib/index"
+import { getFirstPhaseSkewPair } from "tests/fixtures/get-first-phase-skew-pair"
 import { phaseSkewSvg } from "tests/fixtures/phase-skew-svg"
 import { renderSourcePadBoard } from "tests/fixtures/source-pad-board"
 
@@ -18,12 +19,14 @@ test("a jog up to a via inside the source pad adds only the via's layer change",
     ],
   })
 
-  const boardThickness = cju(circuitJson).pcb_board.list()[0].thickness
-  const [pair] = getDifferentialPairPhaseSkew({ circuitJson })
+  const [board] = cju(circuitJson).pcb_board.list()
+  ok(board)
+  const boardThickness = board.thickness
+  const pair = getFirstPhaseSkewPair({ circuitJson })
   expect(pair.end_to_end_length_delta).toBeCloseTo(2 * boardThickness, 5)
   const [firstPositiveSegment] = pair.positive_trace.segments
-  expect(firstPositiveSegment.start).toEqual({ x: -9, y: 1 })
-  expect(firstPositiveSegment.end).toEqual({ x: -8.6, y: 1 })
+  expect(firstPositiveSegment?.start).toEqual({ x: -9, y: 1 })
+  expect(firstPositiveSegment?.end).toEqual({ x: -8.6, y: 1 })
 
   await expect(phaseSkewSvg(circuitJson)).toMatchSvgSnapshot(import.meta.path)
 })

@@ -32,12 +32,8 @@ export function buildStepGrid({
   )
 
   const cells = new Map<GridCellKey, number[]>()
-  for (let index = 0; index < steps.length; index++) {
-    for (const key of cellsAlong({
-      step: steps[index],
-      cellSize,
-      margin: reach,
-    })) {
+  for (const [index, step] of steps.entries()) {
+    for (const key of cellsAlong({ step, cellSize, margin: reach })) {
       const cell = cells.get(key)
       if (cell) {
         cell.push(index)
@@ -61,7 +57,8 @@ export function stepsNear({
   for (const key of cellsAlong({ step, cellSize: grid.cellSize, margin: 0 })) {
     for (const index of grid.cells.get(key) ?? []) found.add(index)
   }
-  return [...found].map((index) => grid.steps[index])
+  // Cells store only indices created from grid.steps.
+  return [...found].map((index) => grid.steps[index]!)
 }
 
 /**

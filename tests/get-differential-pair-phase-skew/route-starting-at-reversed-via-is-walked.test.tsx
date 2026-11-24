@@ -1,7 +1,8 @@
 import { expect, test } from "bun:test"
+import { ok } from "node:assert/strict"
 import { cju } from "@tscircuit/circuit-json-util"
-import { getDifferentialPairPhaseSkew } from "lib/index"
 import { createBasicAutorouter } from "tests/fixtures/create-basic-autorouter"
+import { getFirstPhaseSkewPair } from "tests/fixtures/get-first-phase-skew-pair"
 import { phaseSkewSvg } from "tests/fixtures/phase-skew-svg"
 import { renderCircuit } from "tests/fixtures/render-circuit"
 
@@ -18,6 +19,8 @@ test("a route that starts with a via leaving on its from_layer is walked across 
         algorithmFn: createBasicAutorouter(async (simpleRouteJson) =>
           simpleRouteJson.connections.map((connection, index) => {
             const [start, end] = connection.pointsToConnect
+            ok(end, "Expected a routing end point")
+            ok(start, "Expected a routing start point")
             const wire = { route_type: "wire" as const, width: 0.15 }
             if (start.layer === "top") {
               return {
@@ -94,16 +97,15 @@ test("a route that starts with a via leaving on its from_layer is walked across 
     </board>,
   )
   const db = cju(circuitJson)
-  expect(db.pcb_trace.list()[0].route[0]).toMatchObject({
+  const [board] = db.pcb_board.list()
+  ok(board)
+  expect(db.pcb_trace.list()[0]?.route[0]).toMatchObject({
     route_type: "via",
     from_layer: "top",
   })
 
-  const [pair] = getDifferentialPairPhaseSkew({ circuitJson })
-  expect(pair.end_to_end_length_delta).toBeCloseTo(
-    db.pcb_board.list()[0].thickness,
-    5,
-  )
+  const pair = getFirstPhaseSkewPair({ circuitJson })
+  expect(pair.end_to_end_length_delta).toBeCloseTo(board.thickness, 5)
 
   await expect(phaseSkewSvg(circuitJson)).toMatchSvgSnapshot(import.meta.path)
 })

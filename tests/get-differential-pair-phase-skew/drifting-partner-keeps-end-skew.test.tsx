@@ -1,5 +1,5 @@
 import { expect, test } from "bun:test"
-import { getDifferentialPairPhaseSkew } from "lib/index"
+import { getFirstPhaseSkewPair } from "tests/fixtures/get-first-phase-skew-pair"
 import { renderPairBoard } from "tests/fixtures/pair-board"
 import { phaseSkewSvg } from "tests/fixtures/phase-skew-svg"
 
@@ -16,7 +16,7 @@ test("a slightly slanted partner keeps the skew it builds along the run", async 
     ],
     pcbTraceGap: "0.45mm",
   })
-  const [pair] = getDifferentialPairPhaseSkew({ circuitJson })
+  const pair = getFirstPhaseSkewPair({ circuitJson })
 
   // The run's skew grows from 0 to the slant's extra length; the maximum
   // comes from its end, not its middle.

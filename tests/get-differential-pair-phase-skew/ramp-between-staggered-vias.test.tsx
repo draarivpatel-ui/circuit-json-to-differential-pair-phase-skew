@@ -1,5 +1,5 @@
 import { expect, test } from "bun:test"
-import { getDifferentialPairPhaseSkew } from "lib/index"
+import { getFirstPhaseSkewPair } from "tests/fixtures/get-first-phase-skew-pair"
 import { renderPairBoard } from "tests/fixtures/pair-board"
 import { phaseSkewSvg } from "tests/fixtures/phase-skew-svg"
 import { segmentAtX } from "tests/fixtures/segment-at-x"
@@ -29,7 +29,7 @@ test("an interpolated ramp between staggered vias starts after the entry via and
     pcbTraceGap: "0.45mm",
   })
 
-  const [pair] = getDifferentialPairPhaseSkew({ circuitJson })
+  const pair = getFirstPhaseSkewPair({ circuitJson })
 
   // Coupled stretches before and after the staggered vias.
   expect(

@@ -1,5 +1,5 @@
 import { expect, test } from "bun:test"
-import { getDifferentialPairPhaseSkew } from "lib/index"
+import { getFirstPhaseSkewPair } from "tests/fixtures/get-first-phase-skew-pair"
 import { renderPairBoard } from "tests/fixtures/pair-board"
 import { phaseSkewSvg } from "tests/fixtures/phase-skew-svg"
 import { segmentAtX } from "tests/fixtures/segment-at-x"
@@ -20,7 +20,7 @@ test("an asymmetric via lands as a step at the via instead of smearing across th
     pcbTraceGap: "0.45mm",
   })
 
-  const [pair] = getDifferentialPairPhaseSkew({ circuitJson })
+  const pair = getFirstPhaseSkewPair({ circuitJson })
 
   // Coupled before x = -6 and after x = 0 with zero skew.
   expect(
@@ -51,7 +51,7 @@ test("an asymmetric via lands as a step at the via instead of smearing across th
   expect(pair.max_abs_phase_skew).toBeCloseTo(1.6, 5)
 
   // Routing DN from its load pad must reverse start/end via lengths identically.
-  const [reversed] = getDifferentialPairPhaseSkew({
+  const reversed = getFirstPhaseSkewPair({
     circuitJson: await renderPairBoard({
       positivePath: [
         { x: 6, y: 0, via: true, fromLayer: "top", toLayer: "bottom" },
@@ -84,7 +84,7 @@ test("an asymmetric via lands as a step at the via instead of smearing across th
 
   // Mirror: DN drops first at x = -6 while routed from load, so DN's layerChangeLengthAfterMm
   // on the reversed first step is what creates the flat step instead of a ramp.
-  const [reversedNegativeFirst] = getDifferentialPairPhaseSkew({
+  const reversedNegativeFirst = getFirstPhaseSkewPair({
     circuitJson: await renderPairBoard({
       positivePath: [
         { x: 12, y: 0, via: true, fromLayer: "top", toLayer: "bottom" },

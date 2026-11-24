@@ -1,6 +1,6 @@
 import { expect, test } from "bun:test"
 import { cju } from "@tscircuit/circuit-json-util"
-import { getDifferentialPairPhaseSkew } from "lib/index"
+import { getFirstPhaseSkewPair } from "tests/fixtures/get-first-phase-skew-pair"
 import { renderPairBoard } from "tests/fixtures/pair-board"
 import { phaseSkewSvg } from "tests/fixtures/phase-skew-svg"
 import { segmentAtX } from "tests/fixtures/segment-at-x"
@@ -25,7 +25,7 @@ test("a negative trace routed from its load pad still lines up", async () => {
   // The stored negative route really starts at the load end.
   expect(firstPoint?.route_type === "wire" && firstPoint.x).toBe(12)
 
-  const [pair] = getDifferentialPairPhaseSkew({ circuitJson })
+  const pair = getFirstPhaseSkewPair({ circuitJson })
 
   expect(
     segmentAtX({ segments: pair.positive_trace.segments, x: 0 }).phase_skew,

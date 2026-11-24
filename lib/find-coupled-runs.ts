@@ -49,10 +49,9 @@ export function findCoupledRuns({
   referenceGapMm: number | undefined
 }): CoupledRun[] {
   const mainRuns = findRunsAtGap({ positive, negative, referenceGapMm })
-  if (mainRuns.length === 0) return []
-
-  const first = mainRuns[0]
-  const last = mainRuns[mainRuns.length - 1]
+  const [first] = mainRuns
+  const last = mainRuns.at(-1)
+  if (!first || !last) return []
   const positiveBefore = sliceSteps({
     steps: positive,
     from: 0,
@@ -64,13 +63,20 @@ export function findCoupledRuns({
     to: first.negativeStartDistanceMm,
   })
   let beforeRuns: CoupledRun[] = []
-  if (positiveBefore.length > 0 && negativeBefore.length > 0) {
+  const [positiveStart] = positive
+  const [negativeStart] = negative
+  if (
+    positiveStart &&
+    negativeStart &&
+    positiveBefore.length &&
+    negativeBefore.length
+  ) {
     beforeRuns = findRunsAtGap({
       positive: positiveBefore,
       negative: negativeBefore,
       referenceGapMm: Math.hypot(
-        positive[0].start.x - negative[0].start.x,
-        positive[0].start.y - negative[0].start.y,
+        positiveStart.start.x - negativeStart.start.x,
+        positiveStart.start.y - negativeStart.start.y,
       ),
     })
   }
@@ -86,15 +92,20 @@ export function findCoupledRuns({
     to: Number.POSITIVE_INFINITY,
   })
   let afterRuns: CoupledRun[] = []
-  if (positiveAfter.length > 0 && negativeAfter.length > 0) {
+  const positiveEnd = positive.at(-1)
+  const negativeEnd = negative.at(-1)
+  if (
+    positiveEnd &&
+    negativeEnd &&
+    positiveAfter.length &&
+    negativeAfter.length
+  ) {
     afterRuns = findRunsAtGap({
       positive: positiveAfter,
       negative: negativeAfter,
       referenceGapMm: Math.hypot(
-        positive[positive.length - 1].end.x -
-          negative[negative.length - 1].end.x,
-        positive[positive.length - 1].end.y -
-          negative[negative.length - 1].end.y,
+        positiveEnd.end.x - negativeEnd.end.x,
+        positiveEnd.end.y - negativeEnd.end.y,
       ),
     })
   }

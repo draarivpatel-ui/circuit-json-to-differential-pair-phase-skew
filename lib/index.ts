@@ -1,14 +1,10 @@
-export {
-  DEFAULT_PHASE_SKEW_COLORS,
-  type PhaseSkewColors,
-} from "./default-phase-skew-colors"
+export { DEFAULT_PHASE_SKEW_COLORS } from "./default-phase-skew-colors"
+export { getDifferentialPairPhaseSkew } from "./get-differential-pair-phase-skew"
+export { getDifferentialPairPhaseSkewStrokes } from "./get-differential-pair-phase-skew-strokes"
 export type {
   DifferentialPairPhaseSkew,
+  PhaseSkewColors,
   PhaseSkewSegment,
+  PhaseSkewStroke,
   PhaseSkewTrace,
-} from "./differential-pair-phase-skew"
-export { getDifferentialPairPhaseSkew } from "./get-differential-pair-phase-skew"
-export {
-  type PhaseSkewStroke,
-  getDifferentialPairPhaseSkewStrokes,
-} from "./get-differential-pair-phase-skew-strokes"
+} from "./index.d"

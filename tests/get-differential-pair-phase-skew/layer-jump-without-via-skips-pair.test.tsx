@@ -1,4 +1,5 @@
 import { expect, test } from "bun:test"
+import { ok } from "node:assert/strict"
 import { getDifferentialPairPhaseSkew } from "lib/index"
 import { createBasicAutorouter } from "tests/fixtures/create-basic-autorouter"
 import { phaseSkewSvg } from "tests/fixtures/phase-skew-svg"
@@ -17,6 +18,8 @@ test("a layer jump between wire points with no via skips the pair instead of inv
         algorithmFn: createBasicAutorouter(async (simpleRouteJson) =>
           simpleRouteJson.connections.map((connection, index) => {
             const [start, end] = connection.pointsToConnect
+            ok(end, "Expected a routing end point")
+            ok(start, "Expected a routing start point")
             if (start.layer === end.layer) {
               return {
                 type: "pcb_trace",

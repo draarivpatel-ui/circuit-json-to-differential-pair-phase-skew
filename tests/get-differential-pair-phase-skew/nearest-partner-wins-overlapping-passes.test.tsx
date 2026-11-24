@@ -1,5 +1,5 @@
 import { expect, test } from "bun:test"
-import { getDifferentialPairPhaseSkew } from "lib/index"
+import { getFirstPhaseSkewPair } from "tests/fixtures/get-first-phase-skew-pair"
 import { renderPairBoard } from "tests/fixtures/pair-board"
 import { phaseSkewSvg } from "tests/fixtures/phase-skew-svg"
 import { segmentAtX } from "tests/fixtures/segment-at-x"
@@ -22,7 +22,7 @@ test("when the negative trace passes the positive one twice, the nearer pass is 
     ],
     pcbTraceGap: "1mm",
   })
-  const [pair] = getDifferentialPairPhaseSkew({ circuitJson })
+  const pair = getFirstPhaseSkewPair({ circuitJson })
 
   const segments = pair.positive_trace.segments
   expect(segmentAtX({ segments, x: 0 }).phase_skew).toBe(0)

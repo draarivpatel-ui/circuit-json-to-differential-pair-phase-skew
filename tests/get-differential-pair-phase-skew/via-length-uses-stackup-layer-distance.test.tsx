@@ -1,6 +1,7 @@
 import { expect, test } from "bun:test"
+import { ok } from "node:assert/strict"
 import { cju } from "@tscircuit/circuit-json-util"
-import { getDifferentialPairPhaseSkew } from "lib/index"
+import { getFirstPhaseSkewPair } from "tests/fixtures/get-first-phase-skew-pair"
 import { renderPairBoard } from "tests/fixtures/pair-board"
 import { phaseSkewSvg } from "tests/fixtures/phase-skew-svg"
 import { segmentAtX } from "tests/fixtures/segment-at-x"
@@ -28,6 +29,7 @@ test("a via counts the stackup layer distance and a same-layer via adds nothing"
     (layer) => layer.layer_type === "copper" && layer.layer === "top",
   )!
   const prepreg = stackup!.layers[1]
+  ok(prepreg)
   const inner1 = stackup!.layers.find(
     (layer) => layer.layer_type === "copper" && layer.layer === "inner1",
   )!
@@ -35,7 +37,7 @@ test("a via counts the stackup layer distance and a same-layer via adds nothing"
   const expectedViaLength =
     top.thickness! + prepreg.thickness! + inner1.thickness! / 2
 
-  const [pair] = getDifferentialPairPhaseSkew({ circuitJson })
+  const pair = getFirstPhaseSkewPair({ circuitJson })
 
   expect(
     segmentAtX({ segments: pair.positive_trace.segments, x: -9 }).phase_skew,

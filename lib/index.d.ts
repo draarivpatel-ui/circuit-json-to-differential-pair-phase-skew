@@ -1,4 +1,12 @@
-import type { LayerRef, PcbTrace, Point, SourceBus } from "circuit-json"
+// Public types shared with index.ts. tsup reads this declaration when
+// TypeScript skips declaration emit for the source installed in node_modules.
+import type {
+  AnyCircuitElement,
+  LayerRef,
+  PcbTrace,
+  Point,
+  SourceBus,
+} from "circuit-json"
 
 /**
  * Phase skew of one differential pair, ready to draw.
@@ -61,3 +69,42 @@ export type PhaseSkewSegment = {
    */
   phase_skew?: number
 }
+
+/**
+ * CSS colours for drawing phase skew: by sign, at zero, and where it is
+ * unknown. The sign is per trace, as KiCad shows it: positive where this
+ * trace has run farther than its partner, so the two traces of a pair show
+ * opposite colours at the same place.
+ */
+export type PhaseSkewColors = {
+  /** Where this trace has run farther than its partner. */
+  positive: string
+  /** Where this trace has run less far than its partner. */
+  negative: string
+  /** Where the two traces are in step. */
+  zero: string
+  /** Where phase skew is unknown. */
+  unknown: string
+}
+
+/** One opaque overlay stroke, in PCB coordinates and width in mm. */
+export type PhaseSkewStroke = {
+  layer: LayerRef
+  start: Point
+  end: Point
+  width: number
+  color: string
+}
+
+export declare const DEFAULT_PHASE_SKEW_COLORS: PhaseSkewColors
+
+export declare function getDifferentialPairPhaseSkew({
+  circuitJson,
+}: {
+  circuitJson: AnyCircuitElement[]
+}): DifferentialPairPhaseSkew[]
+
+export declare function getDifferentialPairPhaseSkewStrokes(
+  circuitJson: AnyCircuitElement[],
+  options?: { colors?: Partial<PhaseSkewColors> },
+): PhaseSkewStroke[]

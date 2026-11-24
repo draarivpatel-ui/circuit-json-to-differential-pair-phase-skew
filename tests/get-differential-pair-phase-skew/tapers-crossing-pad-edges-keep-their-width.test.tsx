@@ -1,7 +1,8 @@
 import { expect, test } from "bun:test"
+import { ok } from "node:assert/strict"
 import type { PhaseSkewSegment } from "lib/index"
-import { getDifferentialPairPhaseSkew } from "lib/index"
 import { createBasicAutorouter } from "tests/fixtures/create-basic-autorouter"
+import { getFirstPhaseSkewPair } from "tests/fixtures/get-first-phase-skew-pair"
 import { phaseSkewSvg } from "tests/fixtures/phase-skew-svg"
 import { renderCircuit } from "tests/fixtures/render-circuit"
 
@@ -45,6 +46,8 @@ test("tapers that cross the pad edges keep the copper's local width after clippi
         algorithmFn: createBasicAutorouter(async (simpleRouteJson) =>
           simpleRouteJson.connections.map((connection, index) => {
             const [start, end] = connection.pointsToConnect
+            ok(end, "Expected a routing end point")
+            ok(start, "Expected a routing start point")
             const first = {
               ...start,
               route_type: "wire" as const,
@@ -146,7 +149,7 @@ test("tapers that cross the pad edges keep the copper's local width after clippi
     </board>,
   )
 
-  const [pair] = getDifferentialPairPhaseSkew({ circuitJson })
+  const pair = getFirstPhaseSkewPair({ circuitJson })
   expect(pair.end_to_end_length_delta).toBe(0)
   for (const x of [-7.95, -7.5, -7, 7, 7.5, 7.95]) {
     const segment = segmentCoveringX({

@@ -1,5 +1,5 @@
 import { expect, test } from "bun:test"
-import { getDifferentialPairPhaseSkew } from "lib/index"
+import { getFirstPhaseSkewPair } from "tests/fixtures/get-first-phase-skew-pair"
 import { phaseSkewSvg } from "tests/fixtures/phase-skew-svg"
 import { renderCircuit } from "tests/fixtures/render-circuit"
 
@@ -80,7 +80,7 @@ test("jogs inside the source and load pads add no phase skew, as KiCad clips rou
     </board>,
   )
 
-  const [pair] = getDifferentialPairPhaseSkew({ circuitJson })
+  const pair = getFirstPhaseSkewPair({ circuitJson })
   expect(pair.end_to_end_length_delta).toBe(0)
   expect(pair.max_abs_phase_skew).toBe(0)
   // DP's copper inside each pad is measured straight from the pad edge, at
@@ -89,12 +89,12 @@ test("jogs inside the source and load pads add no phase skew, as KiCad clips rou
   const positiveSegments = pair.positive_trace.segments
   const firstPositiveSegment = positiveSegments[0]
   const lastPositiveSegment = positiveSegments[positiveSegments.length - 1]
-  expect(firstPositiveSegment.start).toEqual({ x: -8, y: 1.5 })
-  expect(firstPositiveSegment.end.x).toBeCloseTo(-6, 9)
-  expect(firstPositiveSegment.end.y).toBeCloseTo(1.5, 9)
-  expect(lastPositiveSegment.start.x).toBeCloseTo(6, 9)
-  expect(lastPositiveSegment.start.y).toBeCloseTo(1.5, 9)
-  expect(lastPositiveSegment.end).toEqual({ x: 8, y: 1.5 })
+  expect(firstPositiveSegment?.start).toEqual({ x: -8, y: 1.5 })
+  expect(firstPositiveSegment?.end.x).toBeCloseTo(-6, 9)
+  expect(firstPositiveSegment?.end.y).toBeCloseTo(1.5, 9)
+  expect(lastPositiveSegment?.start.x).toBeCloseTo(6, 9)
+  expect(lastPositiveSegment?.start.y).toBeCloseTo(1.5, 9)
+  expect(lastPositiveSegment?.end).toEqual({ x: 8, y: 1.5 })
 
   await expect(phaseSkewSvg(circuitJson)).toMatchSvgSnapshot(import.meta.path)
 })

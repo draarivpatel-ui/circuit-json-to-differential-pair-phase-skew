@@ -1,9 +1,9 @@
 import { expect, test } from "bun:test"
-import { getDifferentialPairPhaseSkew } from "lib/index"
 import {
   DETOUR_EXTRA_LENGTH,
   renderDirectedPairBoard,
 } from "tests/fixtures/directed-pair-board"
+import { getFirstPhaseSkewPair } from "tests/fixtures/get-first-phase-skew-pair"
 import { phaseSkewSvg } from "tests/fixtures/phase-skew-svg"
 import { segmentAtX } from "tests/fixtures/segment-at-x"
 
@@ -30,7 +30,7 @@ test("when only one trace has an output port, that trace walks from its output a
       negativeFromOutput: true,
     }),
   ]) {
-    const [pair] = getDifferentialPairPhaseSkew({ circuitJson })
+    const pair = getFirstPhaseSkewPair({ circuitJson })
     expect(
       segmentAtX({ segments: pair.positive_trace.segments, x: 11 }).phase_skew,
     ).toBe(0)

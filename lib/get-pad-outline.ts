@@ -242,9 +242,8 @@ function getPolygonCrossingFractions({
 }): number[] {
   const segment = { x: end.x - start.x, y: end.y - start.y }
   const crossingFractions: number[] = []
-  for (let index = 0; index < points.length; index++) {
-    const edgeStart = points[index]
-    const edgeEnd = points[(index + 1) % points.length]
+  for (const [index, edgeStart] of points.entries()) {
+    const edgeEnd = points[(index + 1) % points.length]!
     const edge = { x: edgeEnd.x - edgeStart.x, y: edgeEnd.y - edgeStart.y }
     const denominator = cross({ a: segment, b: edge })
     // A segment parallel to an edge runs along it or misses it.
@@ -308,9 +307,8 @@ function isInsidePolygon({
 }): boolean {
   if (isOnPolygonEdge({ points, point })) return true
   let inside = false
-  for (let index = 0; index < points.length; index++) {
-    const start = points[index]
-    const end = points[(index + 1) % points.length]
+  for (const [index, start] of points.entries()) {
+    const end = points[(index + 1) % points.length]!
     if (start.y > point.y === end.y > point.y) continue
     const crossingX =
       start.x + ((point.y - start.y) * (end.x - start.x)) / (end.y - start.y)
@@ -330,9 +328,8 @@ function isOnPolygonEdge({
   points: Point[]
   point: Point
 }): boolean {
-  for (let index = 0; index < points.length; index++) {
-    const start = points[index]
-    const end = points[(index + 1) % points.length]
+  for (const [index, start] of points.entries()) {
+    const end = points[(index + 1) % points.length]!
     const edge = { x: end.x - start.x, y: end.y - start.y }
     const fromStart = { x: point.x - start.x, y: point.y - start.y }
     const edgeLength = Math.hypot(edge.x, edge.y)

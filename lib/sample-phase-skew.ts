@@ -1,6 +1,6 @@
 import type { Point } from "circuit-json"
-import type { PhaseSkewSegment } from "./differential-pair-phase-skew"
 import type { PhaseSkewSpan } from "./get-phase-skew-track"
+import type { PhaseSkewSegment } from "./index.d"
 import { roundPhaseSkew } from "./round-phase-skew"
 import { MIN_OVERLAP } from "./select-coupled-runs"
 import type { TraceStep } from "./walk-trace"
@@ -29,16 +29,13 @@ export function samplePhaseSkew({
     const stepEnd = step.startDistance + step.length
     while (
       spanIndex + 1 < spans.length &&
-      spans[spanIndex].endWalkDistanceMm <= step.startDistance
+      spans[spanIndex]!.endWalkDistanceMm <= step.startDistance
     ) {
       spanIndex++
     }
-    for (
-      let index = spanIndex;
-      index < spans.length && spans[index].startWalkDistanceMm < stepEnd;
-      index++
-    ) {
+    for (let index = spanIndex; index < spans.length; index++) {
       const span = spans[index]
+      if (!span || !(span.startWalkDistanceMm < stepEnd)) break
       const from = Math.max(step.startDistance, span.startWalkDistanceMm)
       const to = Math.min(stepEnd, span.endWalkDistanceMm)
       if (to - from <= MIN_OVERLAP) continue

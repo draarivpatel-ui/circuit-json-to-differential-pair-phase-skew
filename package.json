@@ -4,15 +4,14 @@
     "type": "git",
     "url": "https://github.com/tscircuit/circuit-json-to-differential-pair-phase-skew.git"
   },
-  "main": "dist/index.js",
-  "types": "dist/index.d.ts",
+  "module": "lib/index.ts",
+  "types": "lib/index.ts",
   "type": "module",
   "version": "0.0.1",
   "files": [
-    "dist"
+    "lib"
   ],
   "scripts": {
-    "build": "tsup-node lib/index.ts --format esm --sourcemap --dts",
     "format:check": "biome format .",
     "format": "biome format --write ."
   },
@@ -26,7 +25,6 @@
     "circuit-json": "0.0.561",
     "react": "19.3.1",
     "tscircuit": "0.0.3285",
-    "tsup": "^8.2.4",
     "typescript": "^5.9.3"
   },
   "peerDependencies": {

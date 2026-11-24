@@ -92,10 +92,11 @@ function isWholeRun({
   run: CandidateRun
   runParts: CandidateRun[]
 }): boolean {
-  if (runParts.length !== 1) return false
+  const [part] = runParts
   return (
-    runParts[0].positiveStartDistanceMm === run.positiveStartDistanceMm &&
-    runParts[0].positiveEndDistanceMm === run.positiveEndDistanceMm
+    runParts.length === 1 &&
+    part?.positiveStartDistanceMm === run.positiveStartDistanceMm &&
+    part.positiveEndDistanceMm === run.positiveEndDistanceMm
   )
 }
 
@@ -159,48 +160,46 @@ function freeParts({
  * order holds the best chains already ended on the positive trace.
  */
 function bestOrderedChain(runs: CandidateRun[]): CandidateRun[] {
-  const total: number[] = new Array(runs.length)
-  const weightedOffset: number[] = new Array(runs.length)
-  const previous: number[] = new Array(runs.length)
-  const scores: ChainScores = { total, weightedOffset }
-  const byNegativeEnd = indicesSortedBy({
-    runs,
-    key: (run) => run.negativeEndDistanceMm,
-  })
-  const negativeEnds = byNegativeEnd.map(
-    (index) => runs[index].negativeEndDistanceMm,
+  const chainEnds: ChainEnd[] = runs.map((run) => ({
+    run,
+    negativeEndRank: 0,
+  }))
+  const byNegativeEnd = [...chainEnds].sort(
+    (a, b) => a.run.negativeEndDistanceMm - b.run.negativeEndDistanceMm,
   )
-  const rank: number[] = new Array(runs.length)
-  for (let position = 0; position < byNegativeEnd.length; position++) {
-    rank[byNegativeEnd[position]] = position + 1
+  const negativeEnds = byNegativeEnd.map(({ run }) => run.negativeEndDistanceMm)
+  for (const [position, end] of byNegativeEnd.entries()) {
+    end.negativeEndRank = position + 1
   }
-  const byPositiveEnd = indicesSortedBy({
-    runs,
-    key: (run) => run.positiveEndDistanceMm,
-  })
-  const tree = new Array<number>(runs.length + 1).fill(-1)
+  const byPositiveEnd = [...chainEnds].sort(
+    (a, b) => a.run.positiveEndDistanceMm - b.run.positiveEndDistanceMm,
+  )
+  const byPositiveStart = [...chainEnds].sort(
+    (a, b) => a.run.positiveStartDistanceMm - b.run.positiveStartDistanceMm,
+  )
+  const tree = new Array<ScoredChain | undefined>(runs.length + 1)
 
   let ended = 0
-  for (const index of indicesSortedBy({
-    runs,
-    key: (run) => run.positiveStartDistanceMm,
-  })) {
-    const run = runs[index]
+  for (const current of byPositiveStart) {
+    const { run } = current
     // Chains that end before this run on the positive trace become available.
+    let end = byPositiveEnd[ended]
     while (
-      ended < byPositiveEnd.length &&
-      runs[byPositiveEnd[ended]].positiveEndDistanceMm <
+      end !== undefined &&
+      end.run.positiveEndDistanceMm <
         run.positiveStartDistanceMm + CHAIN_TOLERANCE
     ) {
-      const done = byPositiveEnd[ended++]
-      for (let at = rank[done]; at < tree.length; at += at & -at) {
-        if (chainBeats({ scores, chain: done, other: tree[at] })) {
-          tree[at] = done
+      if (!end.chain) throw new Error("Coupled run ended before it was scored")
+      for (let at = end.negativeEndRank; at < tree.length; at += at & -at) {
+        if (chainBeats({ chain: end.chain, other: tree[at] })) {
+          tree[at] = end.chain
         }
       }
+      ended++
+      end = byPositiveEnd[ended]
     }
     // The best of them that also ends before this run on the negative trace.
-    let before = -1
+    let before: ScoredChain | undefined
     for (
       let at = countEndsBefore({
         sortedEndDistancesMm: negativeEnds,
@@ -209,67 +208,63 @@ function bestOrderedChain(runs: CandidateRun[]): CandidateRun[] {
       at > 0;
       at -= at & -at
     ) {
-      if (chainBeats({ scores, chain: tree[at], other: before })) {
-        before = tree[at]
-      }
+      const chain = tree[at]
+      if (chain && chainBeats({ chain, other: before })) before = chain
     }
     const length = run.positiveEndDistanceMm - run.positiveStartDistanceMm
-    total[index] = length
-    weightedOffset[index] = run.midpointCenterlineSpacingMm * length
-    if (before >= 0) {
-      total[index] += total[before]
-      weightedOffset[index] += weightedOffset[before]
+    const chain: ScoredChain = {
+      run,
+      total: length,
+      weightedOffset: run.midpointCenterlineSpacingMm * length,
+      previous: before,
     }
-    previous[index] = before
+    if (before) {
+      chain.total += before.total
+      chain.weightedOffset += before.weightedOffset
+    }
+    current.chain = chain
   }
 
-  let best = -1
-  for (let index = 0; index < runs.length; index++) {
-    if (chainBeats({ scores, chain: index, other: best })) best = index
+  let best: ScoredChain | undefined
+  for (const { chain } of chainEnds) {
+    if (chain && chainBeats({ chain, other: best })) best = chain
   }
   const chain: CandidateRun[] = []
-  for (let index = best; index >= 0; index = previous[index]) {
-    if (chain.length >= runs.length) {
-      throw new Error("Coupled run chain contains a cycle")
-    }
-    chain.push(runs[index])
+  for (let end = best; end !== undefined; end = end.previous) {
+    chain.push(end.run)
   }
   return chain.reverse()
 }
 
-/** Each chain's total positive length and length-weighted offset, by the index of the run it ends at. */
-type ChainScores = { total: number[]; weightedOffset: number[] }
+/** A run's position in negative-end order and the chain ending there once scored. */
+type ChainEnd = {
+  run: CandidateRun
+  negativeEndRank: number
+  chain?: ScoredChain
+}
 
-/** True when the chain ending at run `chain` beats the one ending at `other` (-1 for none). */
+/** The last run of a chain and its cumulative positive length and weighted offset. */
+type ScoredChain = {
+  run: CandidateRun
+  total: number
+  weightedOffset: number
+  previous: ScoredChain | undefined
+}
+
+/** True when a chain covers more length, or has a smaller weighted offset on a tie. */
 function chainBeats({
-  scores,
   chain,
   other,
 }: {
-  scores: ChainScores
-  chain: number
-  other: number
+  chain: ScoredChain
+  other: ScoredChain | undefined
 }): boolean {
-  if (chain < 0) return false
-  if (other < 0) return true
+  if (!other) return true
   const byLength =
-    Math.round(scores.total[chain] / MIN_OVERLAP) -
-    Math.round(scores.total[other] / MIN_OVERLAP)
+    Math.round(chain.total / MIN_OVERLAP) -
+    Math.round(other.total / MIN_OVERLAP)
   if (byLength !== 0) return byLength > 0
-  return scores.weightedOffset[chain] < scores.weightedOffset[other]
-}
-
-/** Indices of `runs` in ascending order of `key`. */
-function indicesSortedBy({
-  runs,
-  key,
-}: {
-  runs: CandidateRun[]
-  key: (run: CandidateRun) => number
-}): number[] {
-  return runs
-    .map((_, index) => index)
-    .sort((a, b) => key(runs[a]) - key(runs[b]))
+  return chain.weightedOffset < other.weightedOffset
 }
 
 /** How many end distances in an ascending list are strictly below `thresholdDistanceMm` (binary search). */
@@ -284,7 +279,7 @@ function countEndsBefore({
   let high = sortedEndDistancesMm.length
   while (low < high) {
     const middle = (low + high) >> 1
-    if (sortedEndDistancesMm[middle] < thresholdDistanceMm) {
+    if (sortedEndDistancesMm[middle]! < thresholdDistanceMm) {
       low = middle + 1
       continue
     }
@@ -304,10 +299,12 @@ function overlapping({
   const found: Interval[] = []
   for (
     let index = firstEndingAfter({ intervals, position: interval.start });
-    index < intervals.length && intervals[index].start < interval.end;
+    index < intervals.length;
     index++
   ) {
-    found.push(intervals[index])
+    const candidate = intervals[index]!
+    if (!(candidate.start < interval.end)) break
+    found.push(candidate)
   }
   return found
 }
@@ -323,8 +320,9 @@ function insertionIndex({
   // Insert by start: a trimmed piece can begin a rounding error before the
   // end of the interval it follows, and must still sort after it.
   let index = firstEndingAfter({ intervals, position: interval.start })
-  while (index < intervals.length && intervals[index].start <= interval.start) {
-    index++
+  let next = intervals[index]
+  while (next && next.start <= interval.start) {
+    next = intervals[++index]
   }
   return index
 }
@@ -341,7 +339,7 @@ function firstEndingAfter({
   let high = intervals.length
   while (low < high) {
     const middle = (low + high) >> 1
-    if (intervals[middle].end <= position) {
+    if (intervals[middle]!.end <= position) {
       low = middle + 1
       continue
     }

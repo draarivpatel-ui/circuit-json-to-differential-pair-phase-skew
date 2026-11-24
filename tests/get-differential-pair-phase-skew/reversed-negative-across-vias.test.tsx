@@ -1,6 +1,6 @@
 import { expect, test } from "bun:test"
-import { getDifferentialPairPhaseSkew } from "lib/index"
 import { DETOUR_EXTRA_LENGTH } from "tests/fixtures/differential-pair-board"
+import { getFirstPhaseSkewPair } from "tests/fixtures/get-first-phase-skew-pair"
 import { renderPairBoard } from "tests/fixtures/pair-board"
 import { phaseSkewSvg } from "tests/fixtures/phase-skew-svg"
 import { segmentAtX } from "tests/fixtures/segment-at-x"
@@ -23,7 +23,7 @@ test("a negative trace routed from its load across two vias keeps its layers and
     pcbTraceGap: "0.45mm",
     negativeFromLoad: true,
   })
-  const [pair] = getDifferentialPairPhaseSkew({ circuitJson })
+  const pair = getFirstPhaseSkewPair({ circuitJson })
 
   for (const x of [-3, 3]) {
     const positive = segmentAtX({ segments: pair.positive_trace.segments, x })

@@ -58,7 +58,7 @@ export function getLayerChangeLength({
   const lastIndex = Math.max(fromIndex, toIndex)
   let layerChangeLength = 0
   for (let index = firstIndex; index <= lastIndex; index++) {
-    const stackupLayer = pcbStackup.layers[index]
+    const stackupLayer = pcbStackup.layers[index]!
     if (stackupLayer.layer_type === "soldermask") continue
     const isEndLayer = index === firstIndex || index === lastIndex
     if (isEndLayer && !isOuterCopperLayer(stackupLayer)) {

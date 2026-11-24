@@ -1,5 +1,5 @@
 import { expect, test } from "bun:test"
-import { getDifferentialPairPhaseSkew } from "lib/index"
+import { getFirstPhaseSkewPair } from "tests/fixtures/get-first-phase-skew-pair"
 import { phaseSkewSvg } from "tests/fixtures/phase-skew-svg"
 import { renderSourcePadBoard } from "tests/fixtures/source-pad-board"
 
@@ -29,7 +29,7 @@ test("a jog past an oval pad's elliptical edge counts as routed copper", async (
     ],
   })
 
-  const [pair] = getDifferentialPairPhaseSkew({ circuitJson })
+  const pair = getFirstPhaseSkewPair({ circuitJson })
   expect(pair.end_to_end_length_delta).toBeCloseTo(JOG_EXTRA_LENGTH_MM, 5)
   expect(pair.max_abs_phase_skew).toBeCloseTo(JOG_EXTRA_LENGTH_MM, 5)
 

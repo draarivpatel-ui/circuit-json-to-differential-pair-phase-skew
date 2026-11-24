@@ -1,19 +1,11 @@
-import type { AnyCircuitElement, LayerRef, Point } from "circuit-json"
-import {
-  DEFAULT_PHASE_SKEW_COLORS,
-  type PhaseSkewColors,
-} from "./default-phase-skew-colors"
-import type { PhaseSkewTrace } from "./differential-pair-phase-skew"
+import type { AnyCircuitElement } from "circuit-json"
+import { DEFAULT_PHASE_SKEW_COLORS } from "./default-phase-skew-colors"
 import { getDifferentialPairPhaseSkew } from "./get-differential-pair-phase-skew"
-
-/** One opaque overlay stroke, in PCB coordinates and width in mm. */
-export type PhaseSkewStroke = {
-  layer: LayerRef
-  start: Point
-  end: Point
-  width: number
-  color: string
-}
+import type {
+  PhaseSkewColors,
+  PhaseSkewStroke,
+  PhaseSkewTrace,
+} from "./index.d"
 
 /** Colour channels from 0 to 255, in red, green and blue order. */
 type RgbColor = [red: number, green: number, blue: number]
@@ -78,9 +70,10 @@ function getStrokeColor({
   }
   const fraction = phase_skew / peakPhaseSkew
   return formatRgb(
-    palette.zero.map(
-      (channel, index) => channel + (peakColor[index] - channel) * fraction,
-    ),
+    ([0, 1, 2] as const).map((index) => {
+      const channel = palette.zero[index]
+      return channel + (peakColor[index] - channel) * fraction
+    }),
   )
 }
 
@@ -132,7 +125,13 @@ function parseRgb(cssColor: string): RgbColor | null {
   const channels = rgb.slice(4, -1).split(",")
   if (channels.length !== 3) return null
   const [red, green, blue] = channels.map(parseRgbChannel)
-  if (red === null || green === null || blue === null) return null
+  if (
+    typeof red !== "number" ||
+    typeof green !== "number" ||
+    typeof blue !== "number"
+  ) {
+    return null
+  }
   return [red, green, blue]
 }
 

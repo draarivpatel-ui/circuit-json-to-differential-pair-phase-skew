@@ -13,14 +13,11 @@ import type {
 import { pcb_board } from "circuit-json"
 import { clipRouteInsidePads } from "./clip-route-inside-pads"
 import { cutRouteTapers } from "./cut-route-tapers"
-import type {
-  DifferentialPairPhaseSkew,
-  PhaseSkewTrace,
-} from "./differential-pair-phase-skew"
 import { findCoupledRuns } from "./find-coupled-runs"
 import type { LayerChangeBoard } from "./get-layer-change-length"
 import { getPhaseSkewTrack, type PhaseSkewTrack } from "./get-phase-skew-track"
 import { haveOppositeTraceWalkDirections } from "./have-opposite-trace-walk-directions"
+import type { DifferentialPairPhaseSkew, PhaseSkewTrace } from "./index.d"
 import { roundPhaseSkew } from "./round-phase-skew"
 import { samplePhaseSkew } from "./sample-phase-skew"
 import { reverseWalk, type TraceWalk, walkTrace } from "./walk-trace"
@@ -81,19 +78,22 @@ export function getDifferentialPairPhaseSkew({
       source_trace_id: negative_source_trace_id,
     })
     if (positiveTraces.length !== 1 || negativeTraces.length !== 1) continue
+    const [positiveTrace] = positiveTraces
+    const [negativeTrace] = negativeTraces
+    if (!positiveTrace || !negativeTrace) continue
     const pairWalks = walkPair({
-      positiveTrace: positiveTraces[0],
-      negativeTrace: negativeTraces[0],
+      positiveTrace,
+      negativeTrace,
       db,
-      board: boardOwnerMap.get(positiveTraces[0].pcb_trace_id),
+      board: boardOwnerMap.get(positiveTrace.pcb_trace_id),
     })
     if (pairWalks === null) continue
     pairs.push(
       getPairPhaseSkew({
         bus,
         trace_gap: differentialPair.trace_gap,
-        positiveTrace: positiveTraces[0],
-        negativeTrace: negativeTraces[0],
+        positiveTrace,
+        negativeTrace,
         pairWalks,
       }),
     )

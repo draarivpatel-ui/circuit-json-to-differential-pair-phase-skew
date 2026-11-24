@@ -1,6 +1,6 @@
 import { expect, test } from "bun:test"
 import type { AnyCircuitElement } from "circuit-json"
-import { getDifferentialPairPhaseSkew } from "lib/index"
+import { getFirstPhaseSkewPair } from "tests/fixtures/get-first-phase-skew-pair"
 import { phaseSkewSvg } from "tests/fixtures/phase-skew-svg"
 import { renderSourcePadBoard } from "tests/fixtures/source-pad-board"
 
@@ -47,10 +47,10 @@ test("a route along a polygon pad's edge is clipped alike on either edge", async
   const upperCircuitJson = await renderEdgeFollowingBoard(1)
   const lowerCircuitJson = await renderEdgeFollowingBoard(-1)
 
-  const [upperPair] = getDifferentialPairPhaseSkew({
+  const upperPair = getFirstPhaseSkewPair({
     circuitJson: upperCircuitJson,
   })
-  const [lowerPair] = getDifferentialPairPhaseSkew({
+  const lowerPair = getFirstPhaseSkewPair({
     circuitJson: lowerCircuitJson,
   })
   expect(upperPair.end_to_end_length_delta).toBeCloseTo(

@@ -1,7 +1,7 @@
 import { expect, test } from "bun:test"
 import { cju } from "@tscircuit/circuit-json-util"
-import { getDifferentialPairPhaseSkew } from "lib/index"
 import { walkTrace } from "lib/walk-trace"
+import { getFirstPhaseSkewPair } from "tests/fixtures/get-first-phase-skew-pair"
 import { renderPairBoard } from "tests/fixtures/pair-board"
 import { phaseSkewSvg } from "tests/fixtures/phase-skew-svg"
 import { segmentAtX } from "tests/fixtures/segment-at-x"
@@ -16,7 +16,7 @@ test("colocated vias keep their full skew step between straight runs", async () 
     pcbTraceGap: "0.45mm",
     thickness: "0.8mm",
   })
-  const [pair] = getDifferentialPairPhaseSkew({ circuitJson })
+  const pair = getFirstPhaseSkewPair({ circuitJson })
 
   const before = segmentAtX({ segments: pair.positive_trace.segments, x: -4 })
   const after = segmentAtX({ segments: pair.positive_trace.segments, x: 0 })
@@ -35,8 +35,8 @@ test("colocated vias keep their full skew step between straight runs", async () 
   if (walk === null) throw new Error("Negative trace has no planar copper")
   const { steps } = walk
   expect(steps).toHaveLength(2)
-  expect(steps[0].layerChangeLengthAfterMm).toBeCloseTo(1.6, 5)
-  expect(steps[1].layerChangeLengthBeforeMm).toBeCloseTo(1.6, 5)
+  expect(steps[0]?.layerChangeLengthAfterMm).toBeCloseTo(1.6, 5)
+  expect(steps[1]?.layerChangeLengthBeforeMm).toBeCloseTo(1.6, 5)
 
   await expect(phaseSkewSvg(circuitJson)).toMatchSvgSnapshot(import.meta.path)
 })

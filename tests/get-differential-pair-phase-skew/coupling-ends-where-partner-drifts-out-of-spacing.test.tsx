@@ -1,5 +1,5 @@
 import { expect, test } from "bun:test"
-import { getDifferentialPairPhaseSkew } from "lib/index"
+import { getFirstPhaseSkewPair } from "tests/fixtures/get-first-phase-skew-pair"
 import { renderPairBoard } from "tests/fixtures/pair-board"
 import { phaseSkewSvg } from "tests/fixtures/phase-skew-svg"
 import { segmentAtX } from "tests/fixtures/segment-at-x"
@@ -17,7 +17,7 @@ test("coupling stops partway along a step where the partner drifts out of spacin
     ],
     pcbTraceGap: "0.45mm",
   })
-  const [pair] = getDifferentialPairPhaseSkew({ circuitJson })
+  const pair = getFirstPhaseSkewPair({ circuitJson })
 
   // Measured up to x = 4.3 (by x = 0 DN's 0.1 mm entry jog has added
   // 2.50 µm and its slant 0.98 µm), and unknown after it.

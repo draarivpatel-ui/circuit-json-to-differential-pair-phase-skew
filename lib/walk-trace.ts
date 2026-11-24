@@ -36,7 +36,7 @@ export type TraceWalk = {
 type TraceRouteVertex = {
   point: Point
   /** One or two copper layers. */
-  layers: LayerRef[]
+  layers: [LayerRef, LayerRef?]
   width: number | undefined
 }
 
@@ -90,9 +90,8 @@ function getTraceWalkFromVertices({
   let distance = 0
   let pendingLayerChangeLengthMm = 0
   let layer: LayerRef | undefined
-  for (let index = 0; index < vertices.length; index++) {
+  for (const [index, to] of vertices.entries()) {
     const from = vertices[index - 1]
-    const to = vertices[index]
     const arrivingLayer =
       layer ?? getFirstArrivingLayer({ first: to, next: vertices[index + 1] })
     if (!to.layers.includes(arrivingLayer)) return null
@@ -151,9 +150,10 @@ function getFirstArrivingLayer({
   first: TraceRouteVertex
   next: TraceRouteVertex | undefined
 }): LayerRef {
-  if (first.layers.length === 1 || next === undefined) return first.layers[0]
-  if (next.layers.includes(first.layers[1])) return first.layers[0]
-  return first.layers[1]
+  const [fromLayer, toLayer] = first.layers
+  if (toLayer === undefined || next === undefined) return fromLayer
+  if (next.layers.includes(toLayer)) return fromLayer
+  return toLayer
 }
 
 /** The layer copper leaves a vertex on: a wire point's own layer, or the other of the two layers a via joins. */
@@ -164,9 +164,9 @@ function getDepartingLayer({
   vertex: TraceRouteVertex
   arrivingLayer: LayerRef
 }): LayerRef {
-  if (vertex.layers.length === 1) return vertex.layers[0]
-  if (vertex.layers[0] === arrivingLayer) return vertex.layers[1]
-  return vertex.layers[0]
+  const [fromLayer, toLayer] = vertex.layers
+  if (toLayer !== undefined && fromLayer === arrivingLayer) return toLayer
+  return fromLayer
 }
 
 /** The steps with each one that carries straight on from the one before, with no via between, joined to it. */
