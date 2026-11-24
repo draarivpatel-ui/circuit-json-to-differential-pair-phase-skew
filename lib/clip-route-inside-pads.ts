@@ -126,7 +126,7 @@ function clipRouteToViaPads({
   // From the last via back, so clipping never moves a via still to visit.
   for (let index = route.length - 1; index >= 0; index--) {
     const via = clippedRoute[index]
-    if (via.route_type !== "via") continue
+    if (via?.route_type !== "via") continue
     const padOutline = getViaPadOutline({ db, pcbTraceId, via })
     clippedRoute = applyPadClip({
       route: clippedRoute,
@@ -258,7 +258,7 @@ function findPadClip({
 }): PadClip | null {
   if (padOutline === null) return null
   const endPoint = route[endIndex]
-  if (endPoint.route_type === "through_pad") return null
+  if (!endPoint || endPoint.route_type === "through_pad") return null
   const endPosition = { x: endPoint.x, y: endPoint.y }
   let runLayer: LayerRef | null = null
   if (endPoint.route_type === "wire") runLayer = endPoint.layer
@@ -271,7 +271,7 @@ function findPadClip({
     index += direction
   ) {
     const routePoint = route[index]
-    if (routePoint.route_type === "through_pad") return null
+    if (!routePoint || routePoint.route_type === "through_pad") return null
     if (routePoint.route_type === "wire") {
       if (runLayer === null) runLayer = routePoint.layer
       if (routePoint.layer !== runLayer) return null

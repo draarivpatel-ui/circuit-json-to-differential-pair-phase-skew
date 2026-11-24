@@ -1,4 +1,4 @@
-# Publishes each push to main as a GitHub Release with the npm tarball attached.
+# Publishes each push to main as a GitHub Release with a tarball of the TypeScript source attached.
 # Install a release with:
 #   bun add https://github.com/tscircuit/circuit-json-to-differential-pair-phase-skew/releases/download/v<version>/circuit-json-to-differential-pair-phase-skew-<version>.tgz
 name: GitHub Release
@@ -31,7 +31,6 @@ jobs:
       - run: bun install
       - run: bunx tsc --noEmit
       - run: bun test
-      - run: bun run build
       - name: Pack the next patch version
         id: pack
         # Releases only push tags, so main's package.json can lag behind:

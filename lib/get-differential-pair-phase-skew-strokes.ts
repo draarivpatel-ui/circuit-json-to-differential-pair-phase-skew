@@ -78,9 +78,10 @@ function getStrokeColor({
   }
   const fraction = phase_skew / peakPhaseSkew
   return formatRgb(
-    palette.zero.map(
-      (channel, index) => channel + (peakColor[index] - channel) * fraction,
-    ),
+    ([0, 1, 2] as const).map((index) => {
+      const channel = palette.zero[index]
+      return channel + (peakColor[index] - channel) * fraction
+    }),
   )
 }
 
@@ -132,7 +133,13 @@ function parseRgb(cssColor: string): RgbColor | null {
   const channels = rgb.slice(4, -1).split(",")
   if (channels.length !== 3) return null
   const [red, green, blue] = channels.map(parseRgbChannel)
-  if (red === null || green === null || blue === null) return null
+  if (
+    typeof red !== "number" ||
+    typeof green !== "number" ||
+    typeof blue !== "number"
+  ) {
+    return null
+  }
   return [red, green, blue]
 }
 

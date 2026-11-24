@@ -33,8 +33,7 @@ export function cutRouteTapers({
   route: PcbTraceRoutePoint[]
 }): PcbTraceRoutePoint[] {
   const cutRoute: PcbTraceRoutePoint[] = []
-  for (let index = 0; index < route.length; index++) {
-    const routePoint = route[index]
+  for (const [index, routePoint] of route.entries()) {
     const next = route[index + 1]
     if (routePoint.route_type !== "wire" || next === undefined) {
       cutRoute.push(routePoint)
@@ -51,13 +50,14 @@ export function cutRouteTapers({
       width_interpolation_mode: _widthInterpolationMode,
       ...plainWire
     } = routePoint
-    const pieces = getTaperPieces({
+    const [firstPiece, ...remainingPieces] = getTaperPieces({
       start: routePoint,
       end: getRoutePointStart(next),
       taper,
     })
-    cutRoute.push({ ...plainWire, width: pieces[0].width })
-    for (const piece of pieces.slice(1)) {
+    if (!firstPiece) throw new Error("A taper must contain at least one piece")
+    cutRoute.push({ ...plainWire, width: firstPiece.width })
+    for (const piece of remainingPieces) {
       cutRoute.push({
         route_type: "wire",
         x: piece.start.x,

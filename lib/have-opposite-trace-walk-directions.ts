@@ -14,10 +14,12 @@ export function haveOppositeTraceWalkDirections({
   positiveSteps: TraceStep[]
   negativeSteps: TraceStep[]
 }): boolean {
-  const positiveStart = positiveSteps[0].start
-  const positiveEnd = positiveSteps[positiveSteps.length - 1].end
-  const negativeStart = negativeSteps[0].start
-  const negativeEnd = negativeSteps[negativeSteps.length - 1].end
+  const positiveStart = positiveSteps[0]?.start
+  const positiveEnd = positiveSteps.at(-1)?.end
+  const negativeStart = negativeSteps[0]?.start
+  const negativeEnd = negativeSteps.at(-1)?.end
+  if (!positiveStart || !positiveEnd || !negativeStart || !negativeEnd)
+    return false
   const sameDirectionEndpointDistanceMm =
     distance({ a: positiveStart, b: negativeStart }) +
     distance({ a: positiveEnd, b: negativeEnd })

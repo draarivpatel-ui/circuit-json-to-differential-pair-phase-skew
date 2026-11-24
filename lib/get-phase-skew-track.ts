@@ -79,7 +79,9 @@ export function getPhaseSkewTrack({
   length: number
 }): PhaseSkewTrack {
   const sideRuns = getSideRuns({ runs, side, steps, partnerSteps })
-  if (sideRuns.length === 0) {
+  const [first] = sideRuns
+  const last = sideRuns.at(-1)
+  if (!first || !last) {
     return {
       spans: [
         unknownSpan({ startWalkDistanceMm: 0, endWalkDistanceMm: length }),
@@ -87,8 +89,6 @@ export function getPhaseSkewTrack({
       range: { maxPhaseSkewMm: 0, minPhaseSkewMm: 0 },
     }
   }
-  const first = sideRuns[0]
-  const last = sideRuns[sideRuns.length - 1]
   const spans: PhaseSkewSpan[] = []
   // Gaps under MIN_OVERLAP are rounding at shared corners, not stretches.
   if (first.startWalkDistanceMm > MIN_OVERLAP) {
@@ -99,8 +99,7 @@ export function getPhaseSkewTrack({
       }),
     )
   }
-  for (let index = 0; index < sideRuns.length; index++) {
-    const run = sideRuns[index]
+  for (const [index, run] of sideRuns.entries()) {
     const previous = sideRuns[index - 1]
     if (previous !== undefined) {
       const unmatchedSpan = interpolateUnmatchedSpan({ previous, run })
@@ -327,7 +326,7 @@ function getAdjacentLayerChangeLengthMm({
   while (low < high) {
     const middle = (low + high) >> 1
     if (
-      edgeDistance({ step: steps[middle], edge }) <
+      edgeDistance({ step: steps[middle]!, edge }) <
       walkDistanceMm - MIN_OVERLAP
     ) {
       low = middle + 1
@@ -335,13 +334,14 @@ function getAdjacentLayerChangeLengthMm({
     }
     high = middle
   }
-  for (
-    let index = low;
-    index < steps.length &&
-    edgeDistance({ step: steps[index], edge }) <= walkDistanceMm + MIN_OVERLAP;
-    index++
-  ) {
-    const length = edgeLayerChangeLengthMm({ step: steps[index], edge })
+  for (let index = low; index < steps.length; index++) {
+    const step = steps[index]
+    if (
+      !step ||
+      !(edgeDistance({ step, edge }) <= walkDistanceMm + MIN_OVERLAP)
+    )
+      break
+    const length = edgeLayerChangeLengthMm({ step, edge })
     if (length > 0) return length
   }
   return 0
