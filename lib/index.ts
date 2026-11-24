@@ -8,3 +8,7 @@ export type {
   PhaseSkewTrace,
 } from "./differential-pair-phase-skew"
 export { getDifferentialPairPhaseSkew } from "./get-differential-pair-phase-skew"
+export {
+  type PhaseSkewStroke,
+  getDifferentialPairPhaseSkewStrokes,
+} from "./get-differential-pair-phase-skew-strokes"
