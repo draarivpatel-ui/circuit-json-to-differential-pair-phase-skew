@@ -1,5 +1,5 @@
 import { expect, test } from "bun:test"
-import { getFirstPhaseSkewPair } from "tests/fixtures/get-first-phase-skew-pair"
+import { getDifferentialPairPhaseSkew } from "lib/index"
 import { renderPairBoard } from "tests/fixtures/pair-board"
 import { phaseSkewSvg } from "tests/fixtures/phase-skew-svg"
 
@@ -19,7 +19,7 @@ test("each trace's phase skew extrema come from known span endpoints, not piece 
     pcbTraceGap: "0.8mm",
   })
 
-  const pair = getFirstPhaseSkewPair({ circuitJson })
+  const [pair] = getDifferentialPairPhaseSkew({ circuitJson })
   const slanted = pair.negative_trace.segments.filter(
     (segment) =>
       segment.phase_skew !== undefined && segment.start.y !== segment.end.y,

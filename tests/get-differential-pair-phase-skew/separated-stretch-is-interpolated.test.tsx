@@ -1,5 +1,5 @@
 import { expect, test } from "bun:test"
-import { getFirstPhaseSkewPair } from "tests/fixtures/get-first-phase-skew-pair"
+import { getDifferentialPairPhaseSkew } from "lib/index"
 import { renderPairBoard } from "tests/fixtures/pair-board"
 import { phaseSkewSvg } from "tests/fixtures/phase-skew-svg"
 import { segmentAtX } from "tests/fixtures/segment-at-x"
@@ -16,7 +16,7 @@ test("phase skew ramps between matched runs where the traces split apart", async
     ],
     pcbTraceGap: "0.45mm",
   })
-  const pair = getFirstPhaseSkewPair({ circuitJson })
+  const [pair] = getDifferentialPairPhaseSkew({ circuitJson })
 
   const beside = segmentAtX({ segments: pair.positive_trace.segments, x: -9 })
   const apart = segmentAtX({ segments: pair.positive_trace.segments, x: 0 })
@@ -34,10 +34,10 @@ test("phase skew ramps between matched runs where the traces split apart", async
     (segment) => segment.start.x >= -6 && segment.end.x <= 6,
   )
   expect(ramp).toHaveLength(240)
-  for (const [index, segment] of ramp.entries()) {
-    const previous = ramp[index - 1]
-    if (previous === undefined) continue
-    expect(segment.phase_skew ?? 0).toBeLessThan(previous.phase_skew ?? 0)
+  for (let index = 1; index < ramp.length; index++) {
+    expect(ramp[index].phase_skew ?? 0).toBeLessThan(
+      ramp[index - 1].phase_skew ?? 0,
+    )
   }
   // Only the measured stretches count toward the maximum: 12 mm of detour.
   expect(pair.max_abs_phase_skew).toBeCloseTo(12, 5)

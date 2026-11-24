@@ -29,8 +29,6 @@ async function renderFarPair({
   })
 }
 
-import { getFirstPhaseSkewPair } from "tests/fixtures/get-first-phase-skew-pair"
-
 test("without pcbTraceGap, splitting a route into more points doesn't change coupling", async () => {
   // 2 mm apart is beyond ten trace widths, so the far stretch never couples,
   // whether DN is one 22 mm step or 22 steps of 1 mm.
@@ -40,7 +38,7 @@ test("without pcbTraceGap, splitting a route into more points doesn't change cou
       circuitJson: await renderFarPair({ step: 30 }),
     }),
   )
-  const pair = getFirstPhaseSkewPair({ circuitJson })
+  const [pair] = getDifferentialPairPhaseSkew({ circuitJson })
   const middle = pair.positive_trace.segments.find(
     (segment) => segment.start.x <= 0 && segment.end.x >= 0,
   )

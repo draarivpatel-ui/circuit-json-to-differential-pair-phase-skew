@@ -1,6 +1,6 @@
 import type { Point } from "circuit-json"
+import type { PhaseSkewSegment } from "./differential-pair-phase-skew"
 import type { PhaseSkewSpan } from "./get-phase-skew-track"
-import type { PhaseSkewSegment } from "./index.d"
 import { roundPhaseSkew } from "./round-phase-skew"
 import { MIN_OVERLAP } from "./select-coupled-runs"
 import type { TraceStep } from "./walk-trace"

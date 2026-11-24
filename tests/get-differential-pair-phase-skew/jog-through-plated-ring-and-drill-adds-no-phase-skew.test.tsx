@@ -1,5 +1,5 @@
 import { expect, test } from "bun:test"
-import { getFirstPhaseSkewPair } from "tests/fixtures/get-first-phase-skew-pair"
+import { getDifferentialPairPhaseSkew } from "lib/index"
 import { phaseSkewSvg } from "tests/fixtures/phase-skew-svg"
 import { renderSourcePadBoard } from "tests/fixtures/source-pad-board"
 
@@ -25,7 +25,7 @@ test("a jog out to a plated pad's ring and back across its drill adds no phase s
     ],
   })
 
-  const pair = getFirstPhaseSkewPair({ circuitJson })
+  const [pair] = getDifferentialPairPhaseSkew({ circuitJson })
   expect(pair.end_to_end_length_delta).toBe(0)
   expect(pair.max_abs_phase_skew).toBe(0)
 

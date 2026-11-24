@@ -1,5 +1,5 @@
 import { expect, test } from "bun:test"
-import { getFirstPhaseSkewPair } from "tests/fixtures/get-first-phase-skew-pair"
+import { getDifferentialPairPhaseSkew } from "lib/index"
 import { renderPairBoard } from "tests/fixtures/pair-board"
 import { phaseSkewSvg } from "tests/fixtures/phase-skew-svg"
 import { segmentAtX } from "tests/fixtures/segment-at-x"
@@ -23,7 +23,7 @@ test("where two passes overlap, the nearer one is used even when it comes later"
     ],
     pcbTraceGap: "1mm",
   })
-  const pair = getFirstPhaseSkewPair({ circuitJson })
+  const [pair] = getDifferentialPairPhaseSkew({ circuitJson })
 
   // At x = 0 DP has run 12 mm.
   expect(

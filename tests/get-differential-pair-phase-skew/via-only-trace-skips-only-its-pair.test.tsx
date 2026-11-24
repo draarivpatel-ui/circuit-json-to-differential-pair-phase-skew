@@ -1,5 +1,4 @@
 import { expect, test } from "bun:test"
-import { ok } from "node:assert/strict"
 import { cju } from "@tscircuit/circuit-json-util"
 import { getDifferentialPairPhaseSkew } from "lib/index"
 import { phaseSkewSvg } from "tests/fixtures/phase-skew-svg"
@@ -126,7 +125,6 @@ test("a pair with a via-only trace is skipped and the other pair is still measur
   })
   expect(differentialPairPhaseSkews).toHaveLength(1)
   const [pair] = differentialPairPhaseSkews
-  ok(pair)
   expect(cju(circuitJson).source_bus.get(pair.source_bus_id)?.name).toBe("PAIR")
   expect(pair.max_abs_phase_skew).toBe(0)
 

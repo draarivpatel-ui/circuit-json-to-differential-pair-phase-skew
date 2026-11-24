@@ -1,8 +1,7 @@
 import { expect, test } from "bun:test"
-import { ok } from "node:assert/strict"
 import { cju } from "@tscircuit/circuit-json-util"
+import { getDifferentialPairPhaseSkew } from "lib/index"
 import { createBasicAutorouter } from "tests/fixtures/create-basic-autorouter"
-import { getFirstPhaseSkewPair } from "tests/fixtures/get-first-phase-skew-pair"
 import { phaseSkewSvg } from "tests/fixtures/phase-skew-svg"
 import { renderCircuit } from "tests/fixtures/render-circuit"
 
@@ -22,8 +21,6 @@ test("a through pad that crosses its pad counts the crossing once, then its laye
           )!
           return simpleRouteJson.connections.map((connection) => {
             const [start, end] = connection.pointsToConnect
-            ok(end, "Expected a routing end point")
-            ok(start, "Expected a routing start point")
             if (start.layer === end.layer) {
               return {
                 type: "pcb_trace",
@@ -131,16 +128,13 @@ test("a through pad that crosses its pad counts the crossing once, then its laye
     </board>,
   )
   const db = cju(circuitJson)
-  const [board] = db.pcb_board.list()
-  ok(board)
 
   const [dp] = db.pcb_trace.list()
-  ok(dp)
   expect(
     dp.route.find((point) => point.route_type === "through_pad"),
   ).toMatchObject({ start: { x: -4.5, y: 0.4 }, end: { x: -3.5, y: 0.4 } })
-  const pair = getFirstPhaseSkewPair({ circuitJson })
-  const boardThickness = board.thickness
+  const [pair] = getDifferentialPairPhaseSkew({ circuitJson })
+  const boardThickness = db.pcb_board.list()[0].thickness
   expect(pair.max_abs_phase_skew).toBeCloseTo(boardThickness, 5)
   expect(pair.end_to_end_length_delta).toBeCloseTo(boardThickness, 5)
   await expect(phaseSkewSvg(circuitJson)).toMatchSvgSnapshot(import.meta.path)

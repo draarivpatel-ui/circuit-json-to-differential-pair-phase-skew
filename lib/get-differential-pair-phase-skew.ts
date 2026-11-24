@@ -13,11 +13,14 @@ import type {
 import { pcb_board } from "circuit-json"
 import { clipRouteInsidePads } from "./clip-route-inside-pads"
 import { cutRouteTapers } from "./cut-route-tapers"
+import type {
+  DifferentialPairPhaseSkew,
+  PhaseSkewTrace,
+} from "./differential-pair-phase-skew"
 import { findCoupledRuns } from "./find-coupled-runs"
 import type { LayerChangeBoard } from "./get-layer-change-length"
 import { getPhaseSkewTrack, type PhaseSkewTrack } from "./get-phase-skew-track"
 import { haveOppositeTraceWalkDirections } from "./have-opposite-trace-walk-directions"
-import type { DifferentialPairPhaseSkew, PhaseSkewTrace } from "./index.d"
 import { roundPhaseSkew } from "./round-phase-skew"
 import { samplePhaseSkew } from "./sample-phase-skew"
 import { reverseWalk, type TraceWalk, walkTrace } from "./walk-trace"

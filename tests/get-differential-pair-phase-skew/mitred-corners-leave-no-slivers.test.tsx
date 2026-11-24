@@ -1,5 +1,5 @@
 import { expect, test } from "bun:test"
-import { getFirstPhaseSkewPair } from "tests/fixtures/get-first-phase-skew-pair"
+import { getDifferentialPairPhaseSkew } from "lib/index"
 import { renderPairBoard } from "tests/fixtures/pair-board"
 import { phaseSkewSvg } from "tests/fixtures/phase-skew-svg"
 
@@ -23,7 +23,7 @@ test("45° corners at non-round coordinates leave no near-zero-length segments",
     ],
     pcbTraceGap: "0.45mm",
   })
-  const pair = getFirstPhaseSkewPair({ circuitJson })
+  const [pair] = getDifferentialPairPhaseSkew({ circuitJson })
 
   for (const segment of [
     ...pair.positive_trace.segments,

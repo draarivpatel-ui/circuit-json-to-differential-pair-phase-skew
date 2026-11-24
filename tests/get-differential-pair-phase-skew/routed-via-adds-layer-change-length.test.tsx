@@ -1,8 +1,7 @@
 import { expect, test } from "bun:test"
-import { ok } from "node:assert/strict"
 import { cju } from "@tscircuit/circuit-json-util"
+import { getDifferentialPairPhaseSkew } from "lib/index"
 import { createBasicAutorouter } from "tests/fixtures/create-basic-autorouter"
-import { getFirstPhaseSkewPair } from "tests/fixtures/get-first-phase-skew-pair"
 import { phaseSkewSvg } from "tests/fixtures/phase-skew-svg"
 import { renderCircuit } from "tests/fixtures/render-circuit"
 
@@ -15,8 +14,6 @@ test("a routed via adds its layer change length to phase skew, like a claimed vi
         algorithmFn: createBasicAutorouter(async (simpleRouteJson) => {
           return simpleRouteJson.connections.map((connection) => {
             const [start, end] = connection.pointsToConnect
-            ok(end, "Expected a routing end point")
-            ok(start, "Expected a routing start point")
             if (start.layer === end.layer) {
               return {
                 type: "pcb_trace",
@@ -106,17 +103,14 @@ test("a routed via adds its layer change length to phase skew, like a claimed vi
     </board>,
   )
   const db = cju(circuitJson)
-  const [board] = db.pcb_board.list()
-  ok(board)
 
   const [dp] = db.pcb_trace.list()
-  ok(dp)
   expect(dp.route.map((point) => point.route_type)).toContain("via")
   // DP is ahead by the board thickness once both traces are on bottom, the
   // same as when it claims a via (claimed-through-pad-adds-layer-change-length).
-  const pair = getFirstPhaseSkewPair({ circuitJson })
+  const [pair] = getDifferentialPairPhaseSkew({ circuitJson })
   expect(pair).toMatchObject({
-    max_abs_phase_skew: board.thickness,
+    max_abs_phase_skew: db.pcb_board.list()[0].thickness,
   })
   await expect(phaseSkewSvg(circuitJson)).toMatchSvgSnapshot(import.meta.path)
 })

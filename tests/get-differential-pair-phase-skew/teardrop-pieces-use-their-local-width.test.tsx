@@ -1,5 +1,5 @@
 import { expect, test } from "bun:test"
-import { getFirstPhaseSkewPair } from "tests/fixtures/get-first-phase-skew-pair"
+import { getDifferentialPairPhaseSkew } from "lib/index"
 import { phaseSkewSvg } from "tests/fixtures/phase-skew-svg"
 import { renderCircuit } from "tests/fixtures/render-circuit"
 
@@ -78,15 +78,15 @@ test("teardrop pieces are matched and drawn at their local width", async () => {
     </board>,
   )
 
-  const pair = getFirstPhaseSkewPair({ circuitJson })
+  const [pair] = getDifferentialPairPhaseSkew({ circuitJson })
   expect(pair.max_abs_phase_skew).toBe(0)
   const teardropSegments = pair.positive_trace.segments.filter(
     (segment) => segment.end.x <= TEARDROP_END_X_MM + 1e-9,
   )
   // Cut every 0.01 mm of width change: 65 pieces from 0.8 mm to 0.15 mm.
   expect(teardropSegments).toHaveLength(65)
-  expect(teardropSegments[0]?.width).toBeCloseTo(0.795, 9)
-  expect(teardropSegments[64]?.width).toBeCloseTo(0.155, 9)
+  expect(teardropSegments[0].width).toBeCloseTo(0.795, 9)
+  expect(teardropSegments[64].width).toBeCloseTo(0.155, 9)
   // Each piece is as wide as the teardrop between its two ends.
   for (const segment of teardropSegments) {
     expect(segment.width).toBeLessThanOrEqual(

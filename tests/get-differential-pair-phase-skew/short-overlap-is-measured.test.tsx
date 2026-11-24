@@ -1,5 +1,5 @@
 import { expect, test } from "bun:test"
-import { getFirstPhaseSkewPair } from "tests/fixtures/get-first-phase-skew-pair"
+import { getDifferentialPairPhaseSkew } from "lib/index"
 import { renderPairBoard } from "tests/fixtures/pair-board"
 import { phaseSkewSvg } from "tests/fixtures/phase-skew-svg"
 import { segmentAtX } from "tests/fixtures/segment-at-x"
@@ -21,7 +21,7 @@ test("a 0.02 mm stretch beside the partner is measured, not lost between samples
     ],
     pcbTraceGap: "0.45mm",
   })
-  const pair = getFirstPhaseSkewPair({ circuitJson })
+  const [pair] = getDifferentialPairPhaseSkew({ circuitJson })
 
   const short = segmentAtX({ segments: pair.positive_trace.segments, x: 0.01 })
   // DN has run 1 + 3 + 11 + 3 mm more than DP's 12 mm to reach x = 0.

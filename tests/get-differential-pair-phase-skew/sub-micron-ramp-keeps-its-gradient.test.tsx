@@ -1,6 +1,5 @@
 import { expect, test } from "bun:test"
-import { ok } from "node:assert/strict"
-import { getFirstPhaseSkewPair } from "tests/fixtures/get-first-phase-skew-pair"
+import { getDifferentialPairPhaseSkew } from "lib/index"
 import { renderPairBoard } from "tests/fixtures/pair-board"
 import { phaseSkewSvg } from "tests/fixtures/phase-skew-svg"
 
@@ -33,7 +32,7 @@ test("a sub-micron phase skew ramp keeps its gradient instead of one flat piece"
     ],
     pcbTraceGap: "0.45mm",
   })
-  const pair = getFirstPhaseSkewPair({ circuitJson })
+  const [pair] = getDifferentialPairPhaseSkew({ circuitJson })
   expect(pair.positive_trace.min_phase_skew).toBeCloseTo(
     -NEGATIVE_EXTRA_LENGTH_MM,
     5,
@@ -46,7 +45,6 @@ test("a sub-micron phase skew ramp keeps its gradient instead of one flat piece"
   const firstAcrossSegment = positiveAcrossSegments[0]
   const lastAcrossSegment =
     positiveAcrossSegments[positiveAcrossSegments.length - 1]
-  ok(firstAcrossSegment && lastAcrossSegment)
   // 3.05 mm and 22.95 mm along the 26 mm ramp, to within one sample.
   expect(firstAcrossSegment.phase_skew ?? 0).toBeCloseTo(
     (-NEGATIVE_EXTRA_LENGTH_MM * 3) / UNMATCHED_LENGTH_MM,
@@ -58,10 +56,10 @@ test("a sub-micron phase skew ramp keeps its gradient instead of one flat piece"
   )
   // Neighbouring pieces with the same rounded phase skew are joined, so each
   // piece is a step further along the ramp.
-  for (const [index, segment] of positiveAcrossSegments.entries()) {
-    const previous = positiveAcrossSegments[index - 1]
-    if (previous === undefined) continue
-    expect(segment.phase_skew ?? 0).toBeLessThan(previous.phase_skew ?? 0)
+  for (let index = 1; index < positiveAcrossSegments.length; index++) {
+    expect(positiveAcrossSegments[index].phase_skew ?? 0).toBeLessThan(
+      positiveAcrossSegments[index - 1].phase_skew ?? 0,
+    )
   }
 
   await expect(phaseSkewSvg(circuitJson)).toMatchSvgSnapshot(import.meta.path)

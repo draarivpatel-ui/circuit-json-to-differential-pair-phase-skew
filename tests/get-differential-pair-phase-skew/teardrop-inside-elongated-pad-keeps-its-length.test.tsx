@@ -1,5 +1,5 @@
 import { expect, test } from "bun:test"
-import { getFirstPhaseSkewPair } from "tests/fixtures/get-first-phase-skew-pair"
+import { getDifferentialPairPhaseSkew } from "lib/index"
 import { phaseSkewSvg } from "tests/fixtures/phase-skew-svg"
 import { renderSourcePadBoard } from "tests/fixtures/source-pad-board"
 
@@ -16,13 +16,13 @@ test("a teardrop wholly inside an elongated pad keeps its length and widths", as
     pcbTeardrops: true,
   })
 
-  const pair = getFirstPhaseSkewPair({ circuitJson })
+  const [pair] = getDifferentialPairPhaseSkew({ circuitJson })
   expect(pair.max_abs_phase_skew).toBe(0)
   const teardropSegments = pair.positive_trace.segments.filter(
     (segment) => segment.end.x <= -7.5 + 1e-9,
   )
   expect(teardropSegments).toHaveLength(65)
-  expect(teardropSegments[64]?.width).toBeCloseTo(0.155, 9)
+  expect(teardropSegments[64].width).toBeCloseTo(0.155, 9)
   const pastTeardrop = pair.positive_trace.segments.find(
     (segment) => segment.start.x < -6.5 && segment.end.x > -6.5,
   )

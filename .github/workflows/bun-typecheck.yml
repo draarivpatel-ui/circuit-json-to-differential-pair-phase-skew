@@ -23,4 +23,6 @@ jobs:
         run: bun i
 
       - name: Run type check
-        run: bunx tsc --noEmit
+        run: |
+          bunx tsc --noEmit
+          bunx tsc --noEmit -p tsconfig.lib.json

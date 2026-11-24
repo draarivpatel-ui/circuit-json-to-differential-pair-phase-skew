@@ -1,5 +1,5 @@
 import { expect, test } from "bun:test"
-import { getFirstPhaseSkewPair } from "tests/fixtures/get-first-phase-skew-pair"
+import { getDifferentialPairPhaseSkew } from "lib/index"
 import { renderPairBoard } from "tests/fixtures/pair-board"
 import { phaseSkewSvg } from "tests/fixtures/phase-skew-svg"
 
@@ -19,13 +19,13 @@ test("a coupled stretch right at the 1 nm overlap threshold finishes without han
     pcbTraceGap: "0.45mm",
   })
 
-  const pair = getFirstPhaseSkewPair({ circuitJson })
+  const [pair] = getDifferentialPairPhaseSkew({ circuitJson })
 
   const known = pair.positive_trace.segments.filter(
     (segment) => segment.phase_skew !== undefined,
   )
   expect(known).toHaveLength(1)
-  expect(known[0]?.phase_skew).toBeCloseTo(-6, 5)
+  expect(known[0].phase_skew).toBeCloseTo(-6, 5)
   expect(pair.max_abs_phase_skew).toBeCloseTo(6, 5)
 
   await expect(phaseSkewSvg(circuitJson)).toMatchSvgSnapshot(import.meta.path)

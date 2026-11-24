@@ -1,5 +1,5 @@
 import { expect, test } from "bun:test"
-import { getFirstPhaseSkewPair } from "tests/fixtures/get-first-phase-skew-pair"
+import { getDifferentialPairPhaseSkew } from "lib/index"
 import { renderPairBoard } from "tests/fixtures/pair-board"
 import { phaseSkewSvg } from "tests/fixtures/phase-skew-svg"
 
@@ -15,13 +15,13 @@ test("a run with constant skew is one segment, not one per sample", async () => 
     negativePath: [],
     pcbTraceGap: "0.45mm",
   })
-  const pair = getFirstPhaseSkewPair({ circuitJson })
+  const [pair] = getDifferentialPairPhaseSkew({ circuitJson })
 
   const afterDetour = pair.positive_trace.segments.filter(
     (segment) => segment.start.y === 0.3 && segment.start.x >= -8.9,
   )
   expect(afterDetour).toHaveLength(1)
-  expect(afterDetour[0]?.end.x).toBeCloseTo(12, 9)
+  expect(afterDetour[0].end.x).toBeCloseTo(12, 9)
 
   await expect(phaseSkewSvg(circuitJson)).toMatchSvgSnapshot(import.meta.path)
 })

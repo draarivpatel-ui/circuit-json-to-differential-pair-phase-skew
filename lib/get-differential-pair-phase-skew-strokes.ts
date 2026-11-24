@@ -1,11 +1,19 @@
-import type { AnyCircuitElement } from "circuit-json"
-import { DEFAULT_PHASE_SKEW_COLORS } from "./default-phase-skew-colors"
+import type { AnyCircuitElement, LayerRef, Point } from "circuit-json"
+import {
+  DEFAULT_PHASE_SKEW_COLORS,
+  type PhaseSkewColors,
+} from "./default-phase-skew-colors"
+import type { PhaseSkewTrace } from "./differential-pair-phase-skew"
 import { getDifferentialPairPhaseSkew } from "./get-differential-pair-phase-skew"
-import type {
-  PhaseSkewColors,
-  PhaseSkewStroke,
-  PhaseSkewTrace,
-} from "./index.d"
+
+/** One opaque overlay stroke, in PCB coordinates and width in mm. */
+export type PhaseSkewStroke = {
+  layer: LayerRef
+  start: Point
+  end: Point
+  width: number
+  color: string
+}
 
 /** Colour channels from 0 to 255, in red, green and blue order. */
 type RgbColor = [red: number, green: number, blue: number]

@@ -1,7 +1,6 @@
 import { expect, test } from "bun:test"
-import { ok } from "node:assert/strict"
 import { cju } from "@tscircuit/circuit-json-util"
-import { getFirstPhaseSkewPair } from "tests/fixtures/get-first-phase-skew-pair"
+import { getDifferentialPairPhaseSkew } from "lib/index"
 import { renderPairBoard } from "tests/fixtures/pair-board"
 import { phaseSkewSvg } from "tests/fixtures/phase-skew-svg"
 import { segmentAtX } from "tests/fixtures/segment-at-x"
@@ -21,8 +20,7 @@ test("each via adds the same length to skew as to trace_length", async () => {
   const [positiveLength, negativeLength] = cju(circuitJson)
     .pcb_trace.list()
     .map((trace) => trace.trace_length ?? Number.NaN)
-  ok(positiveLength !== undefined && negativeLength !== undefined)
-  const pair = getFirstPhaseSkewPair({ circuitJson })
+  const [pair] = getDifferentialPairPhaseSkew({ circuitJson })
 
   const before = segmentAtX({ segments: pair.positive_trace.segments, x: -9 })
   const after = segmentAtX({ segments: pair.positive_trace.segments, x: 9 })

@@ -1,6 +1,6 @@
 import { expect, test } from "bun:test"
 import type { AnyCircuitElement } from "circuit-json"
-import { getFirstPhaseSkewPair } from "tests/fixtures/get-first-phase-skew-pair"
+import { getDifferentialPairPhaseSkew } from "lib/index"
 import { renderPairBoard } from "tests/fixtures/pair-board"
 
 /** circuit-json's pcb_board schema default thickness, in mm. */
@@ -30,7 +30,7 @@ test("a board record without thickness or num_layers uses the pcb_board schema d
     },
   )
 
-  const pair = getFirstPhaseSkewPair({
+  const [pair] = getDifferentialPairPhaseSkew({
     circuitJson: circuitJsonWithoutBoardDimensions,
   })
   expect(pair.end_to_end_length_delta).toBeCloseTo(

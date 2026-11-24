@@ -1,5 +1,5 @@
 import { expect, test } from "bun:test"
-import { getFirstPhaseSkewPair } from "tests/fixtures/get-first-phase-skew-pair"
+import { getDifferentialPairPhaseSkew } from "lib/index"
 import { type PairPathPoint, renderPairBoard } from "tests/fixtures/pair-board"
 import { phaseSkewSvg } from "tests/fixtures/phase-skew-svg"
 import { segmentAtX } from "tests/fixtures/segment-at-x"
@@ -41,8 +41,8 @@ test("a straight trace running into wider pads still couples at both pad fan-out
     negativePath: NEGATIVE_FAN_PATH,
   })
 
-  const straight = getFirstPhaseSkewPair({ circuitJson: straightJson })
-  const kinked = getFirstPhaseSkewPair({ circuitJson: kinkedJson })
+  const [straight] = getDifferentialPairPhaseSkew({ circuitJson: straightJson })
+  const [kinked] = getDifferentialPairPhaseSkew({ circuitJson: kinkedJson })
 
   for (const pair of [straight, kinked]) {
     const startFanout = segmentAtX({

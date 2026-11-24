@@ -20,9 +20,7 @@ export function phaseSkewStrokesSvg({
   caption: string
 }): string {
   const db = cju(circuitJson)
-  const [board] = db.pcb_board.list()
-  const boardWidth = board?.width
-  const boardHeight = board?.height
+  const { width: boardWidth, height: boardHeight } = db.pcb_board.list()[0]
   if (boardWidth === undefined || boardHeight === undefined) {
     throw new Error("The demo board must have an explicit size")
   }

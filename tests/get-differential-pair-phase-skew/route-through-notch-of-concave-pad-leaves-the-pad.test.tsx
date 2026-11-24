@@ -1,6 +1,6 @@
 import { expect, test } from "bun:test"
 import type { AnyCircuitElement } from "circuit-json"
-import { getFirstPhaseSkewPair } from "tests/fixtures/get-first-phase-skew-pair"
+import { getDifferentialPairPhaseSkew } from "lib/index"
 import type { PairPathPoint } from "tests/fixtures/pair-board"
 import { phaseSkewSvg } from "tests/fixtures/phase-skew-svg"
 import { renderSourcePadBoard } from "tests/fixtures/source-pad-board"
@@ -56,8 +56,8 @@ test("a route crossing the notch of a concave pad leaves the pad there, however 
     ...NOTCH_CROSSING_PATH,
   ])
 
-  const pair = getFirstPhaseSkewPair({ circuitJson })
-  const subdividedPair = getFirstPhaseSkewPair({
+  const [pair] = getDifferentialPairPhaseSkew({ circuitJson })
+  const [subdividedPair] = getDifferentialPairPhaseSkew({
     circuitJson: subdividedCircuitJson,
   })
   expect(pair.end_to_end_length_delta).toBeCloseTo(ROUTE_EXTRA_LENGTH_MM, 5)

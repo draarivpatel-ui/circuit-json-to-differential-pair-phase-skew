@@ -1,6 +1,6 @@
 import { expect, test } from "bun:test"
 import type { PhaseSkewSegment } from "lib/index"
-import { getFirstPhaseSkewPair } from "tests/fixtures/get-first-phase-skew-pair"
+import { getDifferentialPairPhaseSkew } from "lib/index"
 import { renderPairBoard } from "tests/fixtures/pair-board"
 import { phaseSkewSvg } from "tests/fixtures/phase-skew-svg"
 import { segmentAtX } from "tests/fixtures/segment-at-x"
@@ -55,7 +55,7 @@ test("45° mitred bends create opposite-sign skew of 2 * d * tan(pi/8) on couple
     ],
     pcbTraceGap: "0.45mm",
   })
-  const pair = getFirstPhaseSkewPair({ circuitJson })
+  const [pair] = getDifferentialPairPhaseSkew({ circuitJson })
 
   const entryPos = segmentAtX({
     segments: pair.positive_trace.segments,

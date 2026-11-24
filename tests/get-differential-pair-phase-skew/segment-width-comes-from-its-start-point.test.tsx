@@ -1,7 +1,6 @@
 import { expect, test } from "bun:test"
-import { ok } from "node:assert/strict"
+import { getDifferentialPairPhaseSkew } from "lib/index"
 import { createBasicAutorouter } from "tests/fixtures/create-basic-autorouter"
-import { getFirstPhaseSkewPair } from "tests/fixtures/get-first-phase-skew-pair"
 import { phaseSkewSvg } from "tests/fixtures/phase-skew-svg"
 import { renderCircuit } from "tests/fixtures/render-circuit"
 
@@ -14,8 +13,6 @@ test("each phase skew segment takes the width of its start route point, like the
         algorithmFn: createBasicAutorouter(async (simpleRouteJson) =>
           simpleRouteJson.connections.map((connection, index) => {
             const [start, end] = connection.pointsToConnect
-            ok(end, "Expected a routing end point")
-            ok(start, "Expected a routing start point")
             return {
               type: "pcb_trace",
               pcb_trace_id: `trace_${index}`,
@@ -83,7 +80,7 @@ test("each phase skew segment takes the width of its start route point, like the
       />
     </board>,
   )
-  const pair = getFirstPhaseSkewPair({ circuitJson })
+  const [pair] = getDifferentialPairPhaseSkew({ circuitJson })
   expect(pair).toMatchObject({
     max_abs_phase_skew: 0,
     positive_trace: { segments: [{ width: 0.15 }, { width: 0.8 }] },

@@ -1,6 +1,6 @@
 import { expect, test } from "bun:test"
 import { cju } from "@tscircuit/circuit-json-util"
-import { getFirstPhaseSkewPair } from "tests/fixtures/get-first-phase-skew-pair"
+import { getDifferentialPairPhaseSkew } from "lib/index"
 import { renderPairBoard } from "tests/fixtures/pair-board"
 import { phaseSkewSvg } from "tests/fixtures/phase-skew-svg"
 
@@ -21,9 +21,9 @@ test("a jog inside a via's pad adds no phase skew, as KiCad clips routing inside
     negativePath: [{ x: 11.87, y: 0 }, via],
     pcbTraceGap: "0.45mm",
   })
-  expect(cju(circuitJson).pcb_via.list()[0]?.outer_diameter).toBe(0.3)
+  expect(cju(circuitJson).pcb_via.list()[0].outer_diameter).toBe(0.3)
 
-  const pair = getFirstPhaseSkewPair({ circuitJson })
+  const [pair] = getDifferentialPairPhaseSkew({ circuitJson })
   expect(pair.end_to_end_length_delta).toBe(0)
   expect(pair.max_abs_phase_skew).toBe(0)
 

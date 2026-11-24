@@ -1,5 +1,4 @@
 import { expect, test } from "bun:test"
-import { ok } from "node:assert/strict"
 import { cju } from "@tscircuit/circuit-json-util"
 import { getDifferentialPairPhaseSkew } from "lib/index"
 import { createBasicAutorouter } from "tests/fixtures/create-basic-autorouter"
@@ -15,8 +14,6 @@ test("skips a pair routed as two PCB traces per side", async () => {
         algorithmFn: createBasicAutorouter(async (simpleRouteJson) =>
           simpleRouteJson.connections.flatMap((connection, index) => {
             const [start, end] = connection.pointsToConnect
-            ok(end, "Expected a routing end point")
-            ok(start, "Expected a routing start point")
             const middle = { x: 0, y: start.y, layer: "top" as const }
             return [
               {
