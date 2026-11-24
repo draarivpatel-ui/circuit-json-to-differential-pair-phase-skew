@@ -10,6 +10,7 @@ test("a matched pair has two white strokes widened by 10%", async () => {
 
   expect(strokes).toEqual(
     [0.6, -0.6].map((y) => ({
+      pcb_trace_id: expect.any(String),
       layer: "top",
       start: { x: -12, y },
       end: { x: 12, y },

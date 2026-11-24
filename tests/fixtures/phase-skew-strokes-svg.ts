@@ -25,7 +25,7 @@ export function phaseSkewStrokesSvg({
     throw new Error("The demo board must have an explicit size")
   }
   const panelHeight = boardHeight + 1.2
-  const copper = db.pcb_trace.list().flatMap(({ route }) =>
+  const copper = db.pcb_trace.list().flatMap(({ pcb_trace_id, route }) =>
     route.flatMap<PhaseSkewStroke>((end, index) => {
       const start = route[index - 1]
       if (
@@ -46,10 +46,10 @@ export function phaseSkewStrokesSvg({
       }
       const color = COPPER_COLORS[layer]
       if (start.route_type === "wire") {
-        return [{ layer, start, end, width: start.width, color }]
+        return [{ pcb_trace_id, layer, start, end, width: start.width, color }]
       }
       if (end.route_type === "wire") {
-        return [{ layer, start, end, width: end.width, color }]
+        return [{ pcb_trace_id, layer, start, end, width: end.width, color }]
       }
       return []
     }),

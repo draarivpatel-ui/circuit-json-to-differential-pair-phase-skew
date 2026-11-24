@@ -1,4 +1,4 @@
-import type { AnyCircuitElement, LayerRef, Point } from "circuit-json"
+import type { AnyCircuitElement, LayerRef, PcbTrace, Point } from "circuit-json"
 import {
   DEFAULT_PHASE_SKEW_COLORS,
   type PhaseSkewColors,
@@ -8,6 +8,8 @@ import { getDifferentialPairPhaseSkew } from "./get-differential-pair-phase-skew
 
 /** One opaque overlay stroke, in PCB coordinates and width in mm. */
 export type PhaseSkewStroke = {
+  /** The trace this stroke covers, so renderers can apply their own visibility filters. */
+  pcb_trace_id: PcbTrace["pcb_trace_id"]
   layer: LayerRef
   start: Point
   end: Point
@@ -48,6 +50,7 @@ export function getDifferentialPairPhaseSkewStrokes(
     .flatMap((pair) => [pair.positive_trace, pair.negative_trace])
     .flatMap((trace) =>
       trace.segments.map(({ layer, start, end, width, phase_skew }) => ({
+        pcb_trace_id: trace.pcb_trace_id,
         layer,
         start,
         end,
