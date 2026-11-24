@@ -16,6 +16,7 @@ test("strokes keep their layer and color through a layer change", async () => {
     expect(bottom.layer).toBe("bottom")
     expect(bottom.color).toBe(top.color)
     expect(bottom.color).not.toBe("rgb(255, 255, 255)")
+    expect(bottom.pcb_trace_id).toBe(top.pcb_trace_id)
   }
   await expect(
     phaseSkewStrokesSvg({
