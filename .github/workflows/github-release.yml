@@ -1,0 +1,58 @@
+# Publishes each push to main as a GitHub Release with the npm tarball attached.
+# Install a release with:
+#   bun add https://github.com/tscircuit/circuit-json-to-differential-pair-phase-skew/releases/download/v<version>/circuit-json-to-differential-pair-phase-skew-<version>.tgz
+name: GitHub Release
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+    inputs:
+      source_ref:
+        description: Tested branch or commit to release
+        required: true
+        default: main
+permissions:
+  contents: write
+concurrency:
+  group: github-release
+  cancel-in-progress: false
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.source_ref || github.sha }}
+          fetch-depth: 0
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: 1.3.14
+      - run: bun install
+      - run: bunx tsc --noEmit
+      - run: bun test
+      - run: bun run build
+      - name: Pack the next patch version
+        id: pack
+        # Releases only push tags, so main's package.json can lag behind:
+        # count from the latest release tag.
+        run: |
+          LATEST_TAG=$(git tag --list 'v[0-9]*' --sort=-v:refname | head -n 1)
+          LATEST=${LATEST_TAG#v}
+          LATEST=${LATEST:-0.0.0}
+          VERSION="${LATEST%.*}.$(( ${LATEST##*.} + 1 ))"
+          npm version "$VERSION" --no-git-tag-version --allow-same-version --ignore-scripts
+          npm pack
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+      - name: Create the tag and GitHub Release
+        run: |
+          VERSION=${{ steps.pack.outputs.version }}
+          TARBALL="circuit-json-to-differential-pair-phase-skew-$VERSION.tgz"
+          gh release create "v$VERSION" "$TARBALL" \
+            --target "$(git rev-parse HEAD)" \
+            --title "v$VERSION" \
+            --generate-notes
+          URL="https://github.com/${{ github.repository }}/releases/download/v$VERSION/$TARBALL"
+          echo "Install: \`bun add $URL\`" >> "$GITHUB_STEP_SUMMARY"
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
